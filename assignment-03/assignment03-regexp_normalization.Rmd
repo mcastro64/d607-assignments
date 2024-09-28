@@ -3,6 +3,7 @@ title: "D607 - Assignment 3 - Normalization and Reg Exp"
 author: "Marco Castro"
 date: "2024-09-21"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -169,7 +170,7 @@ For comparison, I also attempted to filter using grepl and achived the same resu
 We were asked to define the following regular expressions:
 
 ```{r regexp}
-p1 <- "(.)\1"
+p1 <- "(.)\\1"
 p2 <- "(.)(.)\\2\\1"
 p3 <- "(..)\1"
 p4 <- "(.).\\1.\\1"
@@ -180,7 +181,7 @@ _a: (.)\1\1_
 Returns true if string contains any characters followed by \1. For example "T\1" or "e\1" in the code block below:
 
 ```{r regexp-q1a}
-test_str <- c('T\1sxded', 'apple\1', 'carrot', '\1brocoli', 'banana')
+test_str <- c('TTT')
 str_detect(test_str, p1)
 ```
 
