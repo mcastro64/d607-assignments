@@ -1,0 +1,84 @@
+---
+title: "D607 - Assignment 2"
+author: "Marco Castro"
+date: "2024-09-15"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+I conducted a simple survey asking six participants to rate six movies on a scale from 1 (low) to 5 (hi). Survey submissions were stored in a MySQL database and retrieved in R using the RMySQL package.
+
+```{r init_vars, echo=FALSE}
+library(RMySQL)
+library(digest) 
+library(clipr) 
+library(tidyverse)
+library(scales)
+
+source("login_credentials.R")
+db_host <- 'cunydata607sql.mysql.database.azure.com' 
+db_port <- 3306
+db_name <- 'marcocastro64'
+```
+
+```{r connect_to_db} 
+# Read data from db
+mydb <-  dbConnect(MySQL(), user = db_user, password = db_password,
+                   dbname = db_name, host = db_host, port = db_port)
+
+query <- "SELECT r.response_id, p.FirstName, m.title, r.rating FROM survey_movie_ratings AS r LEFT JOIN survey_movies AS m ON m.movie_id = r.movie_id LEFT JOIN survey_participants AS p ON p.participant_id = r.participant_id"
+rs <- dbSendQuery(mydb, query)
+df <-  fetch(rs, n = -1)
+dbDisconnect(mydb)
+
+head(df, 10)
+```
+
+## Handling Missing Data 
+
+As some participants did not provide ratings for all six movies, I omitted missing values using na.omit(). I chose this strategy over other strategies such as imputing by replacing values with the mean or median since the sample size was relatively small and I did not want to artificially inflate the average ratings for each movie.
+
+
+```{r null_handler}
+movie_ratings <- na.omit(df)
+```
+
+## Visualizing the ratings
+
+I plotted a bar graph to visualize the average rating for each movie.
+
+```{r plot_ratings}
+ggplot(data=movie_ratings, aes(x=title, y=rating)) +
+  geom_bar(stat="summary", fun="mean") +
+  coord_flip() +
+  labs(
+    title = "Movie Ratings",
+    subtitle = "n=6",
+    x = "Movies",
+    y = "Rating"
+  )   
+```
+
+
+```{r calculating ratings}
+
+avg_movie_ratings <- movie_ratings |>
+    group_by(title) |> 
+    summarize(
+      avg_rating = mean(rating),
+      n = n()
+    )
+avg_movie_ratings
+```
+## Conclusion
+Based on this short survey, the top three rated movies were "Up", "Inside Out", and "Moana" with an average rating 4.6, 4.4, 4.3 respectively. However, it would be worth noting that all three movies had missing responses for at least one movie. It is possible that rankings would change if the participants rated movies they didn't provide answers for previously.
+
+
+

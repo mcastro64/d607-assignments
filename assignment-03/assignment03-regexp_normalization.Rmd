@@ -24,6 +24,30 @@ This section focuses on normalizing dataframes. First I constucted the three dum
 
 ```{r normalized-dataframes}
 
+# original dataset
+games <- tribble(
+  ~game_id, ~date, ~visitor, ~home, ~visitor_score, ~home_score,
+  1, "2024-09-18", "Pirates", "Reds", 3, 4,
+  2, "2024-09-18", "Nationals", "Cubs", 7, 2,
+  3, "2024-09-18", "Tigers", "Orioles", 1, 0,
+  4, "2024-09-18", "Blue Jays", "Rays", 2, 3,
+  5, "2024-09-18", "Phillies", "Mets", 4, 3,
+  6, "2024-09-19", "Pirates", "Reds", 1, 2,
+  7, "2024-09-19", "Nationals", "Cubs", 2, 0,
+  8, "2024-09-19", "Tigers", "Orioles", 2, 3,
+  9, "2024-09-19", "Blue Jays", "Rays", 1, 5,
+  10, "2024-09-19", "Phillies", "Mets", 8, 10,
+  11, "2024-09-20", "Pirates", "Reds", 2, 3,
+  12, "2024-09-20", "Nationals", "Cubs", 2, 6,
+  13, "2024-09-20", "Tigers", "Orioles", 4, 1,
+  14, "2024-09-20", "Blue Jays", "Rays", 5, 3,
+  15, "2024-09-20", "Phillies", "Mets", 2, 12,
+  16, "2024-09-21", "Pirates", "Reds", 1, 7,
+  17, "2024-09-21", "Tigers", "Cubs", 5, 1,
+  18, "2024-09-21", "Tigers", "Orioles", 6, 4,
+  19, "2024-09-21", "Blue Jays", "Rays", 2, 3,
+  20
+
 # create division tibble
 division <- tribble(
   ~division_id, ~league, ~division, 
@@ -170,7 +194,7 @@ For comparison, I also attempted to filter using grepl and achived the same resu
 We were asked to define the following regular expressions:
 
 ```{r regexp}
-p1 <- "(.)\\1"
+p1 <- "(.)\1"
 p2 <- "(.)(.)\\2\\1"
 p3 <- "(..)\1"
 p4 <- "(.).\\1.\\1"
