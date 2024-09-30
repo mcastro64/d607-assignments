@@ -1,0 +1,209 @@
+---
+title: "D607 - Assignment 4 - Tidying Data"
+author: "Marco Castro"
+date: "2024-09-28"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(gt)
+library(ggpubr)
+```
+
+## Overview
+In this assigment, we were tasked with importing a messy (un-tidy) dataset, performing tiddying operations, and performing some basic analysis on our data. 
+
+First, I read the csv stored on my github page
+```{r load-messy data}
+# load messy dataframe from github page
+messy_numbersense <- read_csv("https://raw.githubusercontent.com/mcastro64/d607-assignments/refs/heads/master/assignment-04/assigment4_data.csv")
+
+messy_numbersense |>
+  gt() |>
+  tab_spanner(
+    label = 'On Time',
+    columns = matches("On Time*")
+  ) |>
+  tab_spanner(
+    label = 'Delayed',
+    columns = matches("Delayed*")
+  )
+```
+
+## Pivoting Data
+
+Observations for both on time and delayed flight status for each destination are written along the columns of the dataset, making it difficult to analyze. Our next step is to pivot the table from wide to long, breaking up the columns to individual rows for flight status and destination using the _names_to_ parameter to indicate which columns we want to create based on column names. The _names_to_ parameter was set to the delimitor " - " in order for dplyr to know how to assign the values to the status and destination columns. Finally, the parament _value_to_ was used to pass the value of the original column from the messy dataset to a new column called "flighs".
+
+
+```{r pivot-messy-data}
+numbersense_longer <- messy_numbersense |>
+  pivot_longer(
+   cols = !(airline),
+    names_to = c("status", "destination"), 
+    names_sep = " - ",
+    values_to = "flights"
+  )
+
+numbersense_longer |>
+  gt()
+    
+```
+## Calculating Frequency Delayed and On-time
+
+### Step 1: Calculating total flights by destination airline
+
+Next, I wanted to be able to calculate the percentage of flights that were delayed by airline destination. To do this, I first calculated the total number of flights per airline destination using _group_by_ and _summarise_ to perform a _sum_ calculation across all flights for every airline going to a specific destination, iregardless of status (on-time/delayed).
+
+```{r calc_total_flights_per_airline_destination}
+# calculate total number of flights per airline destination
+total_flights_per_airline_destination <- numbersense_longer |>
+  group_by(airline, destination) |>
+  summarise(
+    total_flights = sum(flights)
+  )
+
+total_flights_per_airline_destination 
+```
+
+### Step 2: Joining datasets
+
+Next, I used a _left_join_ to combine our dataframe in long form and our dataframe with total flights per airline destination. As we are focusing on delayed flights, I used the _filter_ function on the status column to limit our results to flights with a "Delayed" status. 
+
+```{r join_flights_with_totals}
+# join long flights table and total flights table
+# then calculate frequence of delays
+delayed_flights_observations <- numbersense_longer |>
+  left_join(total_flights_per_airline_destination, join_by(airline == airline, destination == destination)) |>
+  filter(status == "Delayed") |>
+  rename(delayed_flights = flights)
+
+delayed_flights_observations |>
+  gt() |>
+  tab_header("Delayed Flights by Airline Destination") 
+```
+
+### Step 3: Calculating Overall Frequency of Delayed Flights by Airline
+
+I wanted to get a sense of what percentage of flights were delayed overall per airline, regardless of destination. Working with the dataframe output from step 2, I again used _group_by_ and _summarize_ to calculate the number of delayed flights per airline, the total number of flights per airline and the percentage of flights delayed by airline.
+
+```{r calc_delayed_flight}
+
+summary_delayed_flights_by_airline <- delayed_flights_observations |>
+  group_by(airline) |>
+  summarize(
+    delayed_flights_by_airline = sum(delayed_flights),
+    total_flights_by_airline = sum(total_flights),
+    percent_delayed_by_airline = round(delayed_flights_by_airline / total_flights_by_airline, 3)
+  )
+
+
+summary_delayed_flights_by_airline |>
+  gt() |>
+  fmt_percent(percent_delayed_by_airline) |>
+  tab_header("Overall Frequency of Delayed Flights by Airline") |>
+  cols_label(
+    airline = "Airlane",
+    delayed_flights_by_airline = "# Flights Delayed",
+    total_flights_by_airline = "Total Flights",
+    percent_delayed_by_airline = "% Flights Delayed"
+  )
+```
+
+### Step 4: Calculating Frequency of Delayed Flights by Airline Destination
+Next, I performed the same calculation on our _delayed_flights_observations_ dataframe to calculate the number of delayed flights per airline destination, the total number of flights per airline destination and the percentage of flights delayed by airline destination.
+
+```{r subset_delayed_flights_with_frequency}
+delayed_flights_by_airline_destination <- delayed_flights_observations |>
+  mutate(percent_delayed = delayed_flights/total_flights) |>
+  subset(select = c(airline, destination, delayed_flights, percent_delayed))
+  
+delayed_flights_by_airline_destination |>
+  gt() |>
+  fmt_percent(percent_delayed) |>
+  tab_header("Frequency of Delayed Flights by Airline Destination") |>
+  cols_label(
+    airline = "Airlane",
+    delayed_flights = "# Flights Delayed",
+    percent_delayed = "% Flights Delayed"
+  )
+```
+## Comparing our results
+
+### Building a bar chart for the count of flights delayed
+
+Using ggplot, I created a simple bar chart plotting airlines and the count of delayed flights. I used the parameter position="dodge" to transform the result from a stacked bar chart to a individual bars for each destination along the x-axis.
+
+```{r plot_count_delayed_flights}
+delayed_flights_count_chart <- ggplot(delayed_flights_by_airline_destination, aes(x=airline, y=delayed_flights, fill=destination)) +
+  geom_bar(
+    stat='identity', 
+    position = position_dodge(.85),
+    width = .7
+  ) +
+  labs(
+    title = "Counts of Airline Flights Delayed per Destination",
+    x = "Airline",
+    y = "Number of Flights Delayed"
+  ) +
+  geom_text(
+    aes(label = delayed_flights), 
+    vjust = -0.5,
+    size = 7,
+    size.unit = "pt",
+    position = position_dodge(.7)
+  ) +
+  theme(
+    plot.title = element_text(size = 10),
+    legend.position = "bottom",
+    aspect.ratio = 4/5
+  ) +
+  ylim(0, 450)
+```
+
+### Building a bar chart for the frequency of flights delayed
+
+I also created a simple bar chart plotting airlines and the percentage of delayed flights. I used the parameter position="dodge" to transform the result from a stacked bar chart to a individual bars for each destination along the x-axis.
+
+```{r plot_freq_delayed_flights}
+delayed_flights_freq_chart <- ggplot(delayed_flights_by_airline_destination, aes(x=airline, y=percent_delayed, fill=destination)) +
+  geom_bar(
+    stat = 'identity', 
+    position=position_dodge(.85),
+    width = 0.7
+  ) +
+  labs(
+    title = "% of Airline Flights Delayed per Destination",
+    x = "Airline",
+    y = "Percent of Flights Delayed"
+  ) + 
+  scale_y_continuous(labels = scales::percent) + 
+  geom_text(
+    aes(label = paste(round(percent_delayed* 100, 1), "%")), 
+    vjust = -0.5,
+    size = 7,
+    size.unit = "pt",
+    position = position_dodge(.85)
+  ) +
+  theme(
+    plot.title = element_text(size = 10),
+    legend.position = "bottom",
+    aspect.ratio = 4/5
+  ) +
+  ylim(0, .35)
+
+```
+
+I used ggpubr to plot them side-by-side for comparison.
+
+```{r streak-comparison chart}
+
+ggarrange(delayed_flights_count_chart, delayed_flights_freq_chart, ncol=2, common.legend = TRUE, legend="bottom")
+
+```
+## Conclusion 
+Examining raw counts, AM West airline's flights to Phoenix had the most delays of any group with 415 delayed arrivals. However, when we compare percent of flights delayed, we see that AM West to Phoenix actually had the second lowest percent of delayed flights (7.9%), second only to Alaska Airline's flight to Phoenix (5.2%). Looking at the total number of flights per airline destination table helps us confirm that AM West to Phoenix had the most flights of any airline to any destination with 5255. Additionally, flights to Phoenix from AM West and Alaska airlines were below their overall percent of delayed flights (10.9% and 13.3% respectively). 
+
