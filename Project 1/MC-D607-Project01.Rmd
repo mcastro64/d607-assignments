@@ -1,0 +1,186 @@
+---
+title: "MCD607 - Project 1 - Chess"
+author: "Marco Castro"
+date: "2024-10-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tibble)
+library(gt)
+```
+
+## Overview
+
+For this project, we were given a text document with a very specific formatting and we were asked to reformat into dataframe of columns "Id", "Player", "State", "Total", "Player Pre-Tournament Rtg", "Avg. Openent Tournament Rating" that can exported as a csv.
+
+Since read the text file in two ways: 
+* using _readLines_, 
+*  using _read.delim_
+
+First, I initialized a variable for my filename, a list of column headers, and number of columns, to be used done the line.
+
+```{r init-variables}
+
+file <-'tournamentinfo.txt'
+
+headers <- c("player_id", "Player", "Total", "Round 1", "Round 2", "Round 3", "Round 4", "Round 5", "Round 6", "Round 7", "State", "USCFID/Rtg (Pre->Post)", "n", "Side 1", "Side 2", "Side 3", "Side 4", "Side 5", "Side 6", "Side 7")
+
+num_cols <- length(headers)
+```
+
+## Reading Text File Using as _readLines_
+
+The _readLines_ function provides a simple method for reading the file as a list of strings. After reading in the file, I began to parse the data. First, I used grep to remove any line that includes the record breaks ("---"). I then split each line into columns using the _strsplit_ function and setting my separator to "|". 
+
+```{r read-txt-lines}
+# readlines 
+raw_lines <- readLines(file)
+# subset only data rows by omitting the breaker lines
+data_rows <- raw_lines[grep("---", raw_lines, invert = TRUE)]
+
+# split by |
+rows_split = strsplit(data_rows, "\\|")
+```
+
+### Joining data from two rows
+
+The resulting list still had each player's information spread accross two rows. To stitch the rows into a single record, I iterated through the list with a for loop to create a reformated list. Since the for loop checks every row, I used the modulo match function to check for odd and even rows. When the loop hit an odd row, I merged it with the next row (an even row) and added this new list to another list called _parsed_list_.
+
+```{r parse-line_data}
+# Loop through all rows to rebuild list,
+# joining sets of odd and even rows; 
+# start with 3 to skip headers
+parsed_list  <- list()
+for (i in 3:length(data_rows)) {
+  
+  # on odd rows, combine current and next row and add to new list
+  if(i %% 2 == 1) {
+    odd_row <- unlist(rows_split[i])
+    evn_row <- unlist(rows_split[i + 1])
+    row_list <- append(odd_row, evn_row)
+    parsed_list <- c(list(row_list), parsed_list)
+  }
+}
+```
+### Converting List to DataFrame
+Once I had the data per player onto a single line, I needed to convert it to dataframe. I first used _unlist_ to expand my data into a long format, putting every value on a single line. I then used the _matrix_ function into the right shape with 20 cols by 64 rows. I casted the result into a dataframe and set my headers.
+
+```{r convert-list-to-df}
+# convert list to dataframe
+lines_df <- data.frame(matrix(unlist(parsed_list), nrow=length(parsed_list), ncol=num_cols, byrow = 1))
+# add column names
+names(lines_df) <- headers
+
+# convert dataframe to tibble and trim white space
+line_data <- as_tibble(lines_df) |>
+   mutate(across(where(is.character), str_trim))
+head(line_data)
+
+```
+
+## Reading using _read.delim_
+
+Although my data ended up in the correct format, I wasn't sure if I loved the approach. I had read that there were performance benefits of using dplyr and tidyr over for loops. I opted to give it another shot, this time using the _read.delim_ function declare my separators and remove blank columns ahead of time. This method also had the added benefit of returning a dataframe, so I didn't need to convert it as in the last step. The record breaks ("---") converted in NAs so I used _drop_na_ to remove these rows from my dataset.
+
+```{r read_delim_ex}
+# read text file usig read.delim
+delim_data <- read.delim(file, header=FALSE, sep="|", skip=4, skipNul=1, blank.lines.skip=1, na.strings=c(""," ","NA")) 
+
+# drop all NA's
+delim_data_df <- Filter(function(x)!all(is.na(x)), delim_data) |>
+  drop_na()
+```
+### Consolidating Rows
+Similar to my for loop test, I used the modulo within the _slice_ function to split my data rows into two dataframes, each containing half of the record's data. I added a column for the row number, which I used as my key when stitching the dataframes back together using _merge_ function. I later dropped the row_id column and declared my new dataframes column names. There's probabbly a more elegant way to do this, but I wasn't able to find a method that worked.
+
+```{r merging-rows-to-create-records}
+# split data into two dfs
+df_even <- delim_data_df |>
+  slice(which(row_number() %% 2 == 1)) |>
+  mutate(row_id = row_number())
+
+df_odd <- delim_data_df |>
+  slice(which(row_number() %% 2 == 0)) |>
+  mutate(row_id = row_number())
+
+# merge data by row_id
+chess_data <- merge(df_even, df_odd, by="row_id") |>
+  subset(select = -c(row_id)) 
+
+# add column names
+names(chess_data) <- headers
+head(chess_data)
+```
+
+## Tidying Up the Dataframe
+I next had to begin tidying up the dataframe. First, I needed to extract the multiple values stored in the "USCFID/Rtg (Pre->Post)" column, including the pre-tournament rating column. I used the _separate_ function in several steps to break up "USCFID/Rtg (Pre->Post)" to "USCFID", 'Rtg (Pre)', 'Rtg (Post)',  'Rtg (Pre P)',  'Rtg (Post P)'. I subsetted only the values I needed and assigned this to the dataframe 'chess_player_rating'.
+
+I also needed to do something similar with the Round # columns, as this column stored both the outcome (W=Win, L=Loss, H=Half Point, U=Withdrew).
+```{r tidy-up}
+
+# Break up "USCFID/Rtg (Pre->Post)" into its parts
+chess_player <- chess_data |>
+  separate(col="USCFID/Rtg (Pre->Post)", into=c('USCFID', 'Rtg'), sep = "\\/ R:") 
+  
+chess_player_rating <- chess_player |>
+  separate(col="Rtg", into=c('Rtg (Pre)', 'Rtg (Post)'), sep = "->") |>
+  separate(col="Rtg (Pre)", into=c('rtg_pre', 'Rtg (Pre P)'), sep = "P") |>
+  separate(col="Rtg (Post)", into=c('rtg_post', 'Rtg (Post P)'), sep = "P") |>
+  mutate(across(where(is.character), str_trim)) |>
+  mutate(
+    rtg_pre = as.integer(rtg_pre),
+    rtg_post = as.integer(rtg_post)
+  ) |>
+  select("player_id", "Player", "State", "Total", rtg_pre, rtg_post)
+```
+
+I also needed to do something similar with the Round # columns, as this column stored both the outcome (W=Win, L=Loss, H=Half Point, U=Withdrew) and the opponent's id. I used _pivot_longer_ to get every observation into its own row, then separate to break up the result and opponent's id into their own colummn. I removed any white space then filtered for W|L rows as H|U represent unplayed matches. I did a right_join to my player ratings dataframe using the oppenent_id as a key. Finally, I ran a summary to get mean or average oppenent rating pre-tournament.
+
+
+```{r tidy-up-2}
+# get opponent pre ratings per match
+tournament_opponents_ratings <- chess_player |>
+  select( "player_id","Round 1", "Round 2", "Round 3", "Round 4", "Round 5", "Round 6", "Round 7") |>
+  pivot_longer(
+    cols = !(player_id),
+    names_to = c( "round"), 
+    values_to = "results"
+  ) |>
+  separate(col="results", into=c("result","opponent_id"), sep="(\\s{2})") |>
+  mutate(across(where(is.character), str_trim)) |>
+  filter(result == "W" | result =="L") |>
+  right_join(chess_player_rating, join_by(opponent_id == player_id))
+
+# summarise oppent ratings per player
+opponent_pre_rtgs <- tournament_opponents_ratings  |>
+  group_by(player_id) |>
+  summarise(
+    avg_opponent_rtg =  mean(rtg_pre),
+    avg_opponent_rtg = round(avg_opponent_rtg,0)
+  )
+
+```
+## Merging the results
+Having my player ratings and their openent ratings, I conducted a _left_merge_ using the player_id as my primary key to combine the two datasets into their final form.
+
+
+```{r join-sets}
+# merge final dataframe
+chess_player_stats <- chess_player_rating |>
+  left_join(opponent_pre_rtgs, join_by(player_id == player_id)) |>
+  select("Player", "State", "Total", rtg_pre, avg_opponent_rtg)
+
+gt(chess_player_stats)
+
+```
+## Writing the Dataframe to CSV
+Finally, I used write.csv to export my dataframe as a csv.
+
+```{r write-csv}
+write.csv(chess_player_stats,"chess_tournament_player_stats.csv")
+```
