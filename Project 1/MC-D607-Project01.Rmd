@@ -18,11 +18,12 @@ library(gt)
 
 For this project, we were given a text document with a very specific formatting and we were asked to reformat into dataframe of columns "Id", "Player", "State", "Total", "Player Pre-Tournament Rtg", "Avg. Openent Tournament Rating" that can exported as a csv.
 
-Since read the text file in two ways: 
-* using _readLines_, 
-*  using _read.delim_
+I read the text file in two ways: 
 
-First, I initialized a variable for my filename, a list of column headers, and number of columns, to be used done the line.
+- using _readLines_, 
+- using _read.delim_
+
+First, I initialized a variable for my filename, a list of column headers, and number of columns to use later on.
 
 ```{r init-variables}
 
@@ -35,16 +36,17 @@ num_cols <- length(headers)
 
 ## Reading Text File Using as _readLines_
 
-The _readLines_ function provides a simple method for reading the file as a list of strings. After reading in the file, I began to parse the data. First, I used grep to remove any line that includes the record breaks ("---"). I then split each line into columns using the _strsplit_ function and setting my separator to "|". 
+The _readLines_ function provides a simple method for reading the file as type char. After reading in the file, I began to parse the data. First, I used grep to remove any line that includes the record breaks ("---"). I then split each line into columns using the _strsplit_ function and setting my separator to "|". This resulted in a list. 
 
 ```{r read-txt-lines}
 # readlines 
 raw_lines <- readLines(file)
+
 # subset only data rows by omitting the breaker lines
 data_rows <- raw_lines[grep("---", raw_lines, invert = TRUE)]
-
 # split by |
 rows_split = strsplit(data_rows, "\\|")
+typeof(rows_split)
 ```
 
 ### Joining data from two rows
@@ -118,7 +120,7 @@ head(chess_data)
 ```
 
 ## Tidying Up the Dataframe
-I next had to begin tidying up the dataframe. First, I needed to extract the multiple values stored in the "USCFID/Rtg (Pre->Post)" column, including the pre-tournament rating column. I used the _separate_ function in several steps to break up "USCFID/Rtg (Pre->Post)" to "USCFID", 'Rtg (Pre)', 'Rtg (Post)',  'Rtg (Pre P)',  'Rtg (Post P)'. I subsetted only the values I needed and assigned this to the dataframe 'chess_player_rating'.
+I next had to begin tidying up the dataframe. First, I needed to extract the multiple values stored in the "USCFID/Rtg (Pre->Post)" column, including the pre-tournament rating column. I used the _separate_ function in several steps to break up "USCFID/Rtg (Pre->Post)" to "USCFID", 'Rtg (Pre)', 'Rtg (Post)',  'Rtg (Pre P)',  'Rtg (Post P)'. R displayed some warnings since the "P" column had many missing values, but these can be ignored since we won't be using these columns. I created a subset with only the values I needed and assigned this to the dataframe 'chess_player_rating'.
 
 I also needed to do something similar with the Round # columns, as this column stored both the outcome (W=Win, L=Loss, H=Half Point, U=Withdrew).
 ```{r tidy-up}

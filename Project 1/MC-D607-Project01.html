@@ -363,10 +363,13 @@ display: none;
 formatting and we were asked to reformat into dataframe of columns “Id”,
 “Player”, “State”, “Total”, “Player Pre-Tournament Rtg”, “Avg. Openent
 Tournament Rating” that can exported as a csv.</p>
-<p>Since read the text file in two ways: * using <em>readLines</em>, *
-using <em>read.delim</em></p>
+<p>I read the text file in two ways:</p>
+<ul>
+<li>using <em>readLines</em>,</li>
+<li>using <em>read.delim</em></li>
+</ul>
 <p>First, I initialized a variable for my filename, a list of column
-headers, and number of columns, to be used done the line.</p>
+headers, and number of columns to use later on.</p>
 <pre class="r"><code>file &lt;-&#39;tournamentinfo.txt&#39;
 
 headers &lt;- c(&quot;player_id&quot;, &quot;Player&quot;, &quot;Total&quot;, &quot;Round 1&quot;, &quot;Round 2&quot;, &quot;Round 3&quot;, &quot;Round 4&quot;, &quot;Round 5&quot;, &quot;Round 6&quot;, &quot;Round 7&quot;, &quot;State&quot;, &quot;USCFID/Rtg (Pre-&gt;Post)&quot;, &quot;n&quot;, &quot;Side 1&quot;, &quot;Side 2&quot;, &quot;Side 3&quot;, &quot;Side 4&quot;, &quot;Side 5&quot;, &quot;Side 6&quot;, &quot;Side 7&quot;)
@@ -376,18 +379,20 @@ num_cols &lt;- length(headers)</code></pre>
 <div id="reading-text-file-using-as-readlines" class="section level2">
 <h2>Reading Text File Using as <em>readLines</em></h2>
 <p>The <em>readLines</em> function provides a simple method for reading
-the file as a list of strings. After reading in the file, I began to
-parse the data. First, I used grep to remove any line that includes the
-record breaks (“—”). I then split each line into columns using the
-<em>strsplit</em> function and setting my separator to “|”.</p>
+the file as type char. After reading in the file, I began to parse the
+data. First, I used grep to remove any line that includes the record
+breaks (“—”). I then split each line into columns using the
+<em>strsplit</em> function and setting my separator to “|”. This
+resulted in a list.</p>
 <pre class="r"><code># readlines 
 raw_lines &lt;- readLines(file)</code></pre>
 <pre><code>## Warning in readLines(file): incomplete final line found on &#39;tournamentinfo.txt&#39;</code></pre>
 <pre class="r"><code># subset only data rows by omitting the breaker lines
 data_rows &lt;- raw_lines[grep(&quot;---&quot;, raw_lines, invert = TRUE)]
-
 # split by |
-rows_split = strsplit(data_rows, &quot;\\|&quot;)</code></pre>
+rows_split = strsplit(data_rows, &quot;\\|&quot;)
+typeof(rows_split)</code></pre>
+<pre><code>## [1] &quot;list&quot;</code></pre>
 <div id="joining-data-from-two-rows" class="section level3">
 <h3>Joining data from two rows</h3>
 <p>The resulting list still had each player’s information spread accross
@@ -515,8 +520,10 @@ extract the multiple values stored in the “USCFID/Rtg (Pre-&gt;Post)”
 column, including the pre-tournament rating column. I used the
 <em>separate</em> function in several steps to break up “USCFID/Rtg
 (Pre-&gt;Post)” to “USCFID”, ‘Rtg (Pre)’, ‘Rtg (Post)’, ‘Rtg (Pre P)’,
-‘Rtg (Post P)’. I subsetted only the values I needed and assigned this
-to the dataframe ‘chess_player_rating’.</p>
+‘Rtg (Post P)’. R displayed some warnings since the “P” column had many
+missing values, but these can be ignored since we won’t be using these
+columns. I created a subset with only the values I needed and assigned
+this to the dataframe ‘chess_player_rating’.</p>
 <p>I also needed to do something similar with the Round # columns, as
 this column stored both the outcome (W=Win, L=Loss, H=Half Point,
 U=Withdrew).</p>
@@ -581,20 +588,20 @@ chess_player_stats &lt;- chess_player_rating |&gt;
   select(&quot;Player&quot;, &quot;State&quot;, &quot;Total&quot;, rtg_pre, avg_opponent_rtg)
 
 gt(chess_player_stats)</code></pre>
-<div id="akxgjrcgvk" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#akxgjrcgvk table {
+<div id="lzdkcmsock" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#lzdkcmsock table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#akxgjrcgvk thead, #akxgjrcgvk tbody, #akxgjrcgvk tfoot, #akxgjrcgvk tr, #akxgjrcgvk td, #akxgjrcgvk th {
+#lzdkcmsock thead, #lzdkcmsock tbody, #lzdkcmsock tfoot, #lzdkcmsock tr, #lzdkcmsock td, #lzdkcmsock th {
 border-style: none;
 }
-#akxgjrcgvk p {
+#lzdkcmsock p {
 margin: 0;
 padding: 0;
 }
-#akxgjrcgvk .gt_table {
+#lzdkcmsock .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -619,11 +626,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_caption {
+#lzdkcmsock .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#akxgjrcgvk .gt_title {
+#lzdkcmsock .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -634,7 +641,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#akxgjrcgvk .gt_subtitle {
+#lzdkcmsock .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -645,7 +652,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#akxgjrcgvk .gt_heading {
+#lzdkcmsock .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -656,12 +663,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_bottom_border {
+#lzdkcmsock .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_col_headings {
+#lzdkcmsock .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -675,7 +682,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_col_heading {
+#lzdkcmsock .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -694,7 +701,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#akxgjrcgvk .gt_column_spanner_outer {
+#lzdkcmsock .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -705,13 +712,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#akxgjrcgvk .gt_column_spanner_outer:first-child {
+#lzdkcmsock .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#akxgjrcgvk .gt_column_spanner_outer:last-child {
+#lzdkcmsock .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#akxgjrcgvk .gt_column_spanner {
+#lzdkcmsock .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -722,10 +729,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#akxgjrcgvk .gt_spanner_row {
+#lzdkcmsock .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#akxgjrcgvk .gt_group_heading {
+#lzdkcmsock .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -750,7 +757,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#akxgjrcgvk .gt_empty_group_heading {
+#lzdkcmsock .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -764,13 +771,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#akxgjrcgvk .gt_from_md > :first-child {
+#lzdkcmsock .gt_from_md > :first-child {
 margin-top: 0;
 }
-#akxgjrcgvk .gt_from_md > :last-child {
+#lzdkcmsock .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#akxgjrcgvk .gt_row {
+#lzdkcmsock .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -788,7 +795,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#akxgjrcgvk .gt_stub {
+#lzdkcmsock .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -800,7 +807,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#akxgjrcgvk .gt_stub_row_group {
+#lzdkcmsock .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -813,13 +820,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#akxgjrcgvk .gt_row_group_first td {
+#lzdkcmsock .gt_row_group_first td {
 border-top-width: 2px;
 }
-#akxgjrcgvk .gt_row_group_first th {
+#lzdkcmsock .gt_row_group_first th {
 border-top-width: 2px;
 }
-#akxgjrcgvk .gt_summary_row {
+#lzdkcmsock .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -828,14 +835,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#akxgjrcgvk .gt_first_summary_row {
+#lzdkcmsock .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_first_summary_row.thick {
+#lzdkcmsock .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#akxgjrcgvk .gt_last_summary_row {
+#lzdkcmsock .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -844,7 +851,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_grand_summary_row {
+#lzdkcmsock .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -853,7 +860,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#akxgjrcgvk .gt_first_grand_summary_row {
+#lzdkcmsock .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -862,7 +869,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_last_grand_summary_row_top {
+#lzdkcmsock .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -871,10 +878,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_striped {
+#lzdkcmsock .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#akxgjrcgvk .gt_table_body {
+#lzdkcmsock .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -882,7 +889,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_footnotes {
+#lzdkcmsock .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -895,7 +902,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_footnote {
+#lzdkcmsock .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -903,7 +910,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#akxgjrcgvk .gt_sourcenotes {
+#lzdkcmsock .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -916,64 +923,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#akxgjrcgvk .gt_sourcenote {
+#lzdkcmsock .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#akxgjrcgvk .gt_left {
+#lzdkcmsock .gt_left {
 text-align: left;
 }
-#akxgjrcgvk .gt_center {
+#lzdkcmsock .gt_center {
 text-align: center;
 }
-#akxgjrcgvk .gt_right {
+#lzdkcmsock .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#akxgjrcgvk .gt_font_normal {
+#lzdkcmsock .gt_font_normal {
 font-weight: normal;
 }
-#akxgjrcgvk .gt_font_bold {
+#lzdkcmsock .gt_font_bold {
 font-weight: bold;
 }
-#akxgjrcgvk .gt_font_italic {
+#lzdkcmsock .gt_font_italic {
 font-style: italic;
 }
-#akxgjrcgvk .gt_super {
+#lzdkcmsock .gt_super {
 font-size: 65%;
 }
-#akxgjrcgvk .gt_footnote_marks {
+#lzdkcmsock .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#akxgjrcgvk .gt_asterisk {
+#lzdkcmsock .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#akxgjrcgvk .gt_indent_1 {
+#lzdkcmsock .gt_indent_1 {
 text-indent: 5px;
 }
-#akxgjrcgvk .gt_indent_2 {
+#lzdkcmsock .gt_indent_2 {
 text-indent: 10px;
 }
-#akxgjrcgvk .gt_indent_3 {
+#lzdkcmsock .gt_indent_3 {
 text-indent: 15px;
 }
-#akxgjrcgvk .gt_indent_4 {
+#lzdkcmsock .gt_indent_4 {
 text-indent: 20px;
 }
-#akxgjrcgvk .gt_indent_5 {
+#lzdkcmsock .gt_indent_5 {
 text-indent: 25px;
 }
-#akxgjrcgvk .katex-display {
+#lzdkcmsock .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#akxgjrcgvk div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#lzdkcmsock div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
