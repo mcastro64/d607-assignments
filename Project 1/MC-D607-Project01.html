@@ -390,74 +390,566 @@ raw_lines &lt;- readLines(file)</code></pre>
 <pre class="r"><code># subset only data rows by omitting the breaker lines
 data_rows &lt;- raw_lines[grep(&quot;---&quot;, raw_lines, invert = TRUE)]
 # split by |
-rows_split = strsplit(data_rows, &quot;\\|&quot;)
-typeof(rows_split)</code></pre>
-<pre><code>## [1] &quot;list&quot;</code></pre>
+rows_split = strsplit(data_rows, &quot;\\|&quot;)</code></pre>
 <div id="joining-data-from-two-rows" class="section level3">
 <h3>Joining data from two rows</h3>
 <p>The resulting list still had each player’s information spread accross
-two rows. To stitch the rows into a single record, I iterated through
-the list with a for loop to create a reformated list. Since the for loop
-checks every row, I used the modulo match function to check for odd and
-even rows. When the loop hit an odd row, I merged it with the next row
-(an even row) and added this new list to another list called
-<em>parsed_list</em>.</p>
-<pre class="r"><code># Loop through all rows to rebuild list,
-# joining sets of odd and even rows; 
-# start with 3 to skip headers
-parsed_list  &lt;- list()
-for (i in 3:length(data_rows)) {
-  
-  # on odd rows, combine current and next row and add to new list
-  if(i %% 2 == 1) {
-    odd_row &lt;- unlist(rows_split[i])
-    evn_row &lt;- unlist(rows_split[i + 1])
-    row_list &lt;- append(odd_row, evn_row)
-    parsed_list &lt;- c(list(row_list), parsed_list)
-  }
-}</code></pre>
-</div>
-<div id="converting-list-to-dataframe" class="section level3">
-<h3>Converting List to DataFrame</h3>
-<p>Once I had the data per player onto a single line, I needed to
-convert it to dataframe. I first used <em>unlist</em> to expand my data
-into a long format, putting every value on a single line. I then used
-the <em>matrix</em> function into the right shape with 20 cols by 64
-rows. I casted the result into a dataframe and set my headers.</p>
+two rows. I needed to convert it to dataframe. I first used
+<em>unlist</em> to expand my data into a long format, putting every
+value on a single line. I then used the <em>matrix</em> function into
+the right shape with 20 cols by 64 rows. I casted the result into a
+dataframe and set my headers.</p>
 <pre class="r"><code># convert list to dataframe
-lines_df &lt;- data.frame(matrix(unlist(parsed_list), nrow=length(parsed_list), ncol=num_cols, byrow = 1))
+parsed_list &lt;- rows_split[3:length(rows_split)]
+lines_df &lt;- data.frame(matrix(unlist(parsed_list),  ncol=num_cols, byrow = 1))
 # add column names
 names(lines_df) &lt;- headers
+
 
 # convert dataframe to tibble and trim white space
 line_data &lt;- as_tibble(lines_df) |&gt;
    mutate(across(where(is.character), str_trim))
-head(line_data)</code></pre>
-<pre><code>## # A tibble: 6 × 20
-##   player_id Player       Total `Round 1` `Round 2` `Round 3` `Round 4` `Round 5`
-##   &lt;chr&gt;     &lt;chr&gt;        &lt;chr&gt; &lt;chr&gt;     &lt;chr&gt;     &lt;chr&gt;     &lt;chr&gt;     &lt;chr&gt;    
-## 1 64        BEN LI       1.0   L  22     D  30     L  31     D  49     L  46    
-## 2 63        THOMAS JOSE… 1.0   L   2     L  48     D  49     L  43     L  45    
-## 3 62        ASHWIN BALA… 1.0   W  55     U         U         U         U        
-## 4 61        JEZZEL FARK… 1.5   L  32     L   3     W  54     L  47     D  42    
-## 5 60        JULIA SHEN   1.5   L  33     L  34     D  45     D  42     L  24    
-## 6 59        SEAN M MC C… 2.0   L  41     B         L   9     L  40     L  43    
-## # ℹ 12 more variables: `Round 6` &lt;chr&gt;, `Round 7` &lt;chr&gt;, State &lt;chr&gt;,
-## #   `USCFID/Rtg (Pre-&gt;Post)` &lt;chr&gt;, n &lt;chr&gt;, `Side 1` &lt;chr&gt;, `Side 2` &lt;chr&gt;,
-## #   `Side 3` &lt;chr&gt;, `Side 4` &lt;chr&gt;, `Side 5` &lt;chr&gt;, `Side 6` &lt;chr&gt;,
-## #   `Side 7` &lt;chr&gt;</code></pre>
+dim(line_data)</code></pre>
+<pre><code>## [1] 64 20</code></pre>
+<pre class="r"><code>gt(line_data[1:5,])</code></pre>
+<div id="dtqbheujpk" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#dtqbheujpk table {
+font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+}
+#dtqbheujpk thead, #dtqbheujpk tbody, #dtqbheujpk tfoot, #dtqbheujpk tr, #dtqbheujpk td, #dtqbheujpk th {
+border-style: none;
+}
+#dtqbheujpk p {
+margin: 0;
+padding: 0;
+}
+#dtqbheujpk .gt_table {
+display: table;
+border-collapse: collapse;
+line-height: normal;
+margin-left: auto;
+margin-right: auto;
+color: #333333;
+font-size: 16px;
+font-weight: normal;
+font-style: normal;
+background-color: #FFFFFF;
+width: auto;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #A8A8A8;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #A8A8A8;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+}
+#dtqbheujpk .gt_caption {
+padding-top: 4px;
+padding-bottom: 4px;
+}
+#dtqbheujpk .gt_title {
+color: #333333;
+font-size: 125%;
+font-weight: initial;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-color: #FFFFFF;
+border-bottom-width: 0;
+}
+#dtqbheujpk .gt_subtitle {
+color: #333333;
+font-size: 85%;
+font-weight: initial;
+padding-top: 3px;
+padding-bottom: 5px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-color: #FFFFFF;
+border-top-width: 0;
+}
+#dtqbheujpk .gt_heading {
+background-color: #FFFFFF;
+text-align: center;
+border-bottom-color: #FFFFFF;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#dtqbheujpk .gt_bottom_border {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#dtqbheujpk .gt_col_headings {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}
+#dtqbheujpk .gt_col_heading {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+overflow-x: hidden;
+}
+#dtqbheujpk .gt_column_spanner_outer {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+padding-top: 0;
+padding-bottom: 0;
+padding-left: 4px;
+padding-right: 4px;
+}
+#dtqbheujpk .gt_column_spanner_outer:first-child {
+padding-left: 0;
+}
+#dtqbheujpk .gt_column_spanner_outer:last-child {
+padding-right: 0;
+}
+#dtqbheujpk .gt_column_spanner {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 5px;
+overflow-x: hidden;
+display: inline-block;
+width: 100%;
+}
+#dtqbheujpk .gt_spanner_row {
+border-bottom-style: hidden;
+}
+#dtqbheujpk .gt_group_heading {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+text-align: left;
+}
+#dtqbheujpk .gt_empty_group_heading {
+padding: 0.5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: middle;
+}
+#dtqbheujpk .gt_from_md > :first-child {
+margin-top: 0;
+}
+#dtqbheujpk .gt_from_md > :last-child {
+margin-bottom: 0;
+}
+#dtqbheujpk .gt_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+margin: 10px;
+border-top-style: solid;
+border-top-width: 1px;
+border-top-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+overflow-x: hidden;
+}
+#dtqbheujpk .gt_stub {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+}
+#dtqbheujpk .gt_stub_row_group {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+vertical-align: top;
+}
+#dtqbheujpk .gt_row_group_first td {
+border-top-width: 2px;
+}
+#dtqbheujpk .gt_row_group_first th {
+border-top-width: 2px;
+}
+#dtqbheujpk .gt_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#dtqbheujpk .gt_first_summary_row {
+border-top-style: solid;
+border-top-color: #D3D3D3;
+}
+#dtqbheujpk .gt_first_summary_row.thick {
+border-top-width: 2px;
+}
+#dtqbheujpk .gt_last_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#dtqbheujpk .gt_grand_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#dtqbheujpk .gt_first_grand_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-style: double;
+border-top-width: 6px;
+border-top-color: #D3D3D3;
+}
+#dtqbheujpk .gt_last_grand_summary_row_top {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: double;
+border-bottom-width: 6px;
+border-bottom-color: #D3D3D3;
+}
+#dtqbheujpk .gt_striped {
+background-color: rgba(128, 128, 128, 0.05);
+}
+#dtqbheujpk .gt_table_body {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}
+#dtqbheujpk .gt_footnotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#dtqbheujpk .gt_footnote {
+margin: 0px;
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#dtqbheujpk .gt_sourcenotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}
+#dtqbheujpk .gt_sourcenote {
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}
+#dtqbheujpk .gt_left {
+text-align: left;
+}
+#dtqbheujpk .gt_center {
+text-align: center;
+}
+#dtqbheujpk .gt_right {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}
+#dtqbheujpk .gt_font_normal {
+font-weight: normal;
+}
+#dtqbheujpk .gt_font_bold {
+font-weight: bold;
+}
+#dtqbheujpk .gt_font_italic {
+font-style: italic;
+}
+#dtqbheujpk .gt_super {
+font-size: 65%;
+}
+#dtqbheujpk .gt_footnote_marks {
+font-size: 75%;
+vertical-align: 0.4em;
+position: initial;
+}
+#dtqbheujpk .gt_asterisk {
+font-size: 100%;
+vertical-align: 0;
+}
+#dtqbheujpk .gt_indent_1 {
+text-indent: 5px;
+}
+#dtqbheujpk .gt_indent_2 {
+text-indent: 10px;
+}
+#dtqbheujpk .gt_indent_3 {
+text-indent: 15px;
+}
+#dtqbheujpk .gt_indent_4 {
+text-indent: 20px;
+}
+#dtqbheujpk .gt_indent_5 {
+text-indent: 25px;
+}
+#dtqbheujpk .katex-display {
+display: inline-flex !important;
+margin-bottom: 0.75em !important;
+}
+#dtqbheujpk div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+height: 0px !important;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="player_id">player_id</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Player">Player</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="Total">Total</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 1">Round 1</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 2">Round 2</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 3">Round 3</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 4">Round 4</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 5">Round 5</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 6">Round 6</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Round 7">Round 7</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="State">State</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="USCFID/Rtg (Pre-&amp;gt;Post)">USCFID/Rtg (Pre-&gt;Post)</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="n">n</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 1">Side 1</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 2">Side 2</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 3">Side 3</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 4">Side 4</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 5">Side 5</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 6">Side 6</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Side 7">Side 7</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="player_id" class="gt_row gt_right">1</td>
+<td headers="Player" class="gt_row gt_left">GARY HUA</td>
+<td headers="Total" class="gt_row gt_right">6.0</td>
+<td headers="Round 1" class="gt_row gt_left">W  39</td>
+<td headers="Round 2" class="gt_row gt_left">W  21</td>
+<td headers="Round 3" class="gt_row gt_left">W  18</td>
+<td headers="Round 4" class="gt_row gt_left">W  14</td>
+<td headers="Round 5" class="gt_row gt_left">W   7</td>
+<td headers="Round 6" class="gt_row gt_left">D  12</td>
+<td headers="Round 7" class="gt_row gt_left">D   4</td>
+<td headers="State" class="gt_row gt_left">ON</td>
+<td headers="USCFID/Rtg (Pre-&gt;Post)" class="gt_row gt_left">15445895 / R: 1794   -&gt;1817</td>
+<td headers="n" class="gt_row gt_left">N:2</td>
+<td headers="Side 1" class="gt_row gt_left">W</td>
+<td headers="Side 2" class="gt_row gt_left">B</td>
+<td headers="Side 3" class="gt_row gt_left">W</td>
+<td headers="Side 4" class="gt_row gt_left">B</td>
+<td headers="Side 5" class="gt_row gt_left">W</td>
+<td headers="Side 6" class="gt_row gt_left">B</td>
+<td headers="Side 7" class="gt_row gt_left">W</td></tr>
+    <tr><td headers="player_id" class="gt_row gt_right">2</td>
+<td headers="Player" class="gt_row gt_left">DAKSHESH DARURI</td>
+<td headers="Total" class="gt_row gt_right">6.0</td>
+<td headers="Round 1" class="gt_row gt_left">W  63</td>
+<td headers="Round 2" class="gt_row gt_left">W  58</td>
+<td headers="Round 3" class="gt_row gt_left">L   4</td>
+<td headers="Round 4" class="gt_row gt_left">W  17</td>
+<td headers="Round 5" class="gt_row gt_left">W  16</td>
+<td headers="Round 6" class="gt_row gt_left">W  20</td>
+<td headers="Round 7" class="gt_row gt_left">W   7</td>
+<td headers="State" class="gt_row gt_left">MI</td>
+<td headers="USCFID/Rtg (Pre-&gt;Post)" class="gt_row gt_left">14598900 / R: 1553   -&gt;1663</td>
+<td headers="n" class="gt_row gt_left">N:2</td>
+<td headers="Side 1" class="gt_row gt_left">B</td>
+<td headers="Side 2" class="gt_row gt_left">W</td>
+<td headers="Side 3" class="gt_row gt_left">B</td>
+<td headers="Side 4" class="gt_row gt_left">W</td>
+<td headers="Side 5" class="gt_row gt_left">B</td>
+<td headers="Side 6" class="gt_row gt_left">W</td>
+<td headers="Side 7" class="gt_row gt_left">B</td></tr>
+    <tr><td headers="player_id" class="gt_row gt_right">3</td>
+<td headers="Player" class="gt_row gt_left">ADITYA BAJAJ</td>
+<td headers="Total" class="gt_row gt_right">6.0</td>
+<td headers="Round 1" class="gt_row gt_left">L   8</td>
+<td headers="Round 2" class="gt_row gt_left">W  61</td>
+<td headers="Round 3" class="gt_row gt_left">W  25</td>
+<td headers="Round 4" class="gt_row gt_left">W  21</td>
+<td headers="Round 5" class="gt_row gt_left">W  11</td>
+<td headers="Round 6" class="gt_row gt_left">W  13</td>
+<td headers="Round 7" class="gt_row gt_left">W  12</td>
+<td headers="State" class="gt_row gt_left">MI</td>
+<td headers="USCFID/Rtg (Pre-&gt;Post)" class="gt_row gt_left">14959604 / R: 1384   -&gt;1640</td>
+<td headers="n" class="gt_row gt_left">N:2</td>
+<td headers="Side 1" class="gt_row gt_left">W</td>
+<td headers="Side 2" class="gt_row gt_left">B</td>
+<td headers="Side 3" class="gt_row gt_left">W</td>
+<td headers="Side 4" class="gt_row gt_left">B</td>
+<td headers="Side 5" class="gt_row gt_left">W</td>
+<td headers="Side 6" class="gt_row gt_left">B</td>
+<td headers="Side 7" class="gt_row gt_left">W</td></tr>
+    <tr><td headers="player_id" class="gt_row gt_right">4</td>
+<td headers="Player" class="gt_row gt_left">PATRICK H SCHILLING</td>
+<td headers="Total" class="gt_row gt_right">5.5</td>
+<td headers="Round 1" class="gt_row gt_left">W  23</td>
+<td headers="Round 2" class="gt_row gt_left">D  28</td>
+<td headers="Round 3" class="gt_row gt_left">W   2</td>
+<td headers="Round 4" class="gt_row gt_left">W  26</td>
+<td headers="Round 5" class="gt_row gt_left">D   5</td>
+<td headers="Round 6" class="gt_row gt_left">W  19</td>
+<td headers="Round 7" class="gt_row gt_left">D   1</td>
+<td headers="State" class="gt_row gt_left">MI</td>
+<td headers="USCFID/Rtg (Pre-&gt;Post)" class="gt_row gt_left">12616049 / R: 1716   -&gt;1744</td>
+<td headers="n" class="gt_row gt_left">N:2</td>
+<td headers="Side 1" class="gt_row gt_left">W</td>
+<td headers="Side 2" class="gt_row gt_left">B</td>
+<td headers="Side 3" class="gt_row gt_left">W</td>
+<td headers="Side 4" class="gt_row gt_left">B</td>
+<td headers="Side 5" class="gt_row gt_left">W</td>
+<td headers="Side 6" class="gt_row gt_left">B</td>
+<td headers="Side 7" class="gt_row gt_left">B</td></tr>
+    <tr><td headers="player_id" class="gt_row gt_right">5</td>
+<td headers="Player" class="gt_row gt_left">HANSHI ZUO</td>
+<td headers="Total" class="gt_row gt_right">5.5</td>
+<td headers="Round 1" class="gt_row gt_left">W  45</td>
+<td headers="Round 2" class="gt_row gt_left">W  37</td>
+<td headers="Round 3" class="gt_row gt_left">D  12</td>
+<td headers="Round 4" class="gt_row gt_left">D  13</td>
+<td headers="Round 5" class="gt_row gt_left">D   4</td>
+<td headers="Round 6" class="gt_row gt_left">W  14</td>
+<td headers="Round 7" class="gt_row gt_left">W  17</td>
+<td headers="State" class="gt_row gt_left">MI</td>
+<td headers="USCFID/Rtg (Pre-&gt;Post)" class="gt_row gt_left">14601533 / R: 1655   -&gt;1690</td>
+<td headers="n" class="gt_row gt_left">N:2</td>
+<td headers="Side 1" class="gt_row gt_left">B</td>
+<td headers="Side 2" class="gt_row gt_left">W</td>
+<td headers="Side 3" class="gt_row gt_left">B</td>
+<td headers="Side 4" class="gt_row gt_left">W</td>
+<td headers="Side 5" class="gt_row gt_left">B</td>
+<td headers="Side 6" class="gt_row gt_left">W</td>
+<td headers="Side 7" class="gt_row gt_left">B</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
 </div>
 </div>
 <div id="reading-using-read.delim" class="section level2">
 <h2>Reading using <em>read.delim</em></h2>
 <p>Although my data ended up in the correct format, I wasn’t sure if I
-loved the approach. I had read that there were performance benefits of
-using dplyr and tidyr over for loops. I opted to give it another shot,
-this time using the <em>read.delim</em> function declare my separators
-and remove blank columns ahead of time. This method also had the added
-benefit of returning a dataframe, so I didn’t need to convert it as in
-the last step. The record breaks (“—”) converted in NAs so I used
-<em>drop_na</em> to remove these rows from my dataset.</p>
+loved the approach. I opted to try using the <em>read.delim</em>
+function declare my separators and remove blank columns ahead of time.
+This method also had the added benefit of returning a dataframe, so I
+didn’t need to convert it as in the last step. The record breaks (“—”)
+converted in NAs so I used <em>drop_na</em> to remove these rows from my
+dataset.</p>
 <pre class="r"><code># read text file usig read.delim
 delim_data &lt;- read.delim(file, header=FALSE, sep=&quot;|&quot;, skip=4, skipNul=1, blank.lines.skip=1, na.strings=c(&quot;&quot;,&quot; &quot;,&quot;NA&quot;)) 
 
@@ -466,14 +958,13 @@ delim_data_df &lt;- Filter(function(x)!all(is.na(x)), delim_data) |&gt;
   drop_na()</code></pre>
 <div id="consolidating-rows" class="section level3">
 <h3>Consolidating Rows</h3>
-<p>Similar to my for loop test, I used the modulo within the
-<em>slice</em> function to split my data rows into two dataframes, each
-containing half of the record’s data. I added a column for the row
-number, which I used as my key when stitching the dataframes back
-together using <em>merge</em> function. I later dropped the row_id
-column and declared my new dataframes column names. There’s probabbly a
-more elegant way to do this, but I wasn’t able to find a method that
-worked.</p>
+<p>I used the modulo within the <em>slice</em> function to split my data
+rows into two dataframes, each containing half of the record’s data. I
+added a column for the row number, which I used as my key when stitching
+the dataframes back together using <em>merge</em> function. I later
+dropped the row_id column and declared my new dataframes column names.
+There’s probably a more elegant way to do this, but I wasn’t able to
+find a method that worked.</p>
 <pre class="r"><code># split data into two dfs
 df_even &lt;- delim_data_df |&gt;
   slice(which(row_number() %% 2 == 1)) |&gt;
@@ -588,20 +1079,20 @@ chess_player_stats &lt;- chess_player_rating |&gt;
   select(&quot;Player&quot;, &quot;State&quot;, &quot;Total&quot;, rtg_pre, avg_opponent_rtg)
 
 gt(chess_player_stats)</code></pre>
-<div id="lzdkcmsock" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#lzdkcmsock table {
+<div id="cibfcjtqor" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#cibfcjtqor table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#lzdkcmsock thead, #lzdkcmsock tbody, #lzdkcmsock tfoot, #lzdkcmsock tr, #lzdkcmsock td, #lzdkcmsock th {
+#cibfcjtqor thead, #cibfcjtqor tbody, #cibfcjtqor tfoot, #cibfcjtqor tr, #cibfcjtqor td, #cibfcjtqor th {
 border-style: none;
 }
-#lzdkcmsock p {
+#cibfcjtqor p {
 margin: 0;
 padding: 0;
 }
-#lzdkcmsock .gt_table {
+#cibfcjtqor .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -626,11 +1117,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#lzdkcmsock .gt_caption {
+#cibfcjtqor .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#lzdkcmsock .gt_title {
+#cibfcjtqor .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -641,7 +1132,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#lzdkcmsock .gt_subtitle {
+#cibfcjtqor .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -652,7 +1143,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#lzdkcmsock .gt_heading {
+#cibfcjtqor .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -663,12 +1154,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#lzdkcmsock .gt_bottom_border {
+#cibfcjtqor .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#lzdkcmsock .gt_col_headings {
+#cibfcjtqor .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -682,7 +1173,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#lzdkcmsock .gt_col_heading {
+#cibfcjtqor .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -701,7 +1192,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#lzdkcmsock .gt_column_spanner_outer {
+#cibfcjtqor .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -712,13 +1203,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#lzdkcmsock .gt_column_spanner_outer:first-child {
+#cibfcjtqor .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#lzdkcmsock .gt_column_spanner_outer:last-child {
+#cibfcjtqor .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#lzdkcmsock .gt_column_spanner {
+#cibfcjtqor .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -729,10 +1220,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#lzdkcmsock .gt_spanner_row {
+#cibfcjtqor .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#lzdkcmsock .gt_group_heading {
+#cibfcjtqor .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -757,7 +1248,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#lzdkcmsock .gt_empty_group_heading {
+#cibfcjtqor .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -771,13 +1262,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#lzdkcmsock .gt_from_md > :first-child {
+#cibfcjtqor .gt_from_md > :first-child {
 margin-top: 0;
 }
-#lzdkcmsock .gt_from_md > :last-child {
+#cibfcjtqor .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#lzdkcmsock .gt_row {
+#cibfcjtqor .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -795,7 +1286,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#lzdkcmsock .gt_stub {
+#cibfcjtqor .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -807,7 +1298,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#lzdkcmsock .gt_stub_row_group {
+#cibfcjtqor .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -820,13 +1311,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#lzdkcmsock .gt_row_group_first td {
+#cibfcjtqor .gt_row_group_first td {
 border-top-width: 2px;
 }
-#lzdkcmsock .gt_row_group_first th {
+#cibfcjtqor .gt_row_group_first th {
 border-top-width: 2px;
 }
-#lzdkcmsock .gt_summary_row {
+#cibfcjtqor .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -835,14 +1326,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#lzdkcmsock .gt_first_summary_row {
+#cibfcjtqor .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#lzdkcmsock .gt_first_summary_row.thick {
+#cibfcjtqor .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#lzdkcmsock .gt_last_summary_row {
+#cibfcjtqor .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -851,7 +1342,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#lzdkcmsock .gt_grand_summary_row {
+#cibfcjtqor .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -860,7 +1351,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#lzdkcmsock .gt_first_grand_summary_row {
+#cibfcjtqor .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -869,7 +1360,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#lzdkcmsock .gt_last_grand_summary_row_top {
+#cibfcjtqor .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -878,10 +1369,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#lzdkcmsock .gt_striped {
+#cibfcjtqor .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#lzdkcmsock .gt_table_body {
+#cibfcjtqor .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -889,7 +1380,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#lzdkcmsock .gt_footnotes {
+#cibfcjtqor .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -902,7 +1393,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#lzdkcmsock .gt_footnote {
+#cibfcjtqor .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -910,7 +1401,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#lzdkcmsock .gt_sourcenotes {
+#cibfcjtqor .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -923,64 +1414,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#lzdkcmsock .gt_sourcenote {
+#cibfcjtqor .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#lzdkcmsock .gt_left {
+#cibfcjtqor .gt_left {
 text-align: left;
 }
-#lzdkcmsock .gt_center {
+#cibfcjtqor .gt_center {
 text-align: center;
 }
-#lzdkcmsock .gt_right {
+#cibfcjtqor .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#lzdkcmsock .gt_font_normal {
+#cibfcjtqor .gt_font_normal {
 font-weight: normal;
 }
-#lzdkcmsock .gt_font_bold {
+#cibfcjtqor .gt_font_bold {
 font-weight: bold;
 }
-#lzdkcmsock .gt_font_italic {
+#cibfcjtqor .gt_font_italic {
 font-style: italic;
 }
-#lzdkcmsock .gt_super {
+#cibfcjtqor .gt_super {
 font-size: 65%;
 }
-#lzdkcmsock .gt_footnote_marks {
+#cibfcjtqor .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#lzdkcmsock .gt_asterisk {
+#cibfcjtqor .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#lzdkcmsock .gt_indent_1 {
+#cibfcjtqor .gt_indent_1 {
 text-indent: 5px;
 }
-#lzdkcmsock .gt_indent_2 {
+#cibfcjtqor .gt_indent_2 {
 text-indent: 10px;
 }
-#lzdkcmsock .gt_indent_3 {
+#cibfcjtqor .gt_indent_3 {
 text-indent: 15px;
 }
-#lzdkcmsock .gt_indent_4 {
+#cibfcjtqor .gt_indent_4 {
 text-indent: 20px;
 }
-#lzdkcmsock .gt_indent_5 {
+#cibfcjtqor .gt_indent_5 {
 text-indent: 25px;
 }
-#lzdkcmsock .katex-display {
+#cibfcjtqor .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#lzdkcmsock div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#cibfcjtqor div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>

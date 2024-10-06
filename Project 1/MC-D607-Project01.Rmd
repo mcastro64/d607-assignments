@@ -46,48 +46,31 @@ raw_lines <- readLines(file)
 data_rows <- raw_lines[grep("---", raw_lines, invert = TRUE)]
 # split by |
 rows_split = strsplit(data_rows, "\\|")
-typeof(rows_split)
 ```
 
 ### Joining data from two rows
 
-The resulting list still had each player's information spread accross two rows. To stitch the rows into a single record, I iterated through the list with a for loop to create a reformated list. Since the for loop checks every row, I used the modulo match function to check for odd and even rows. When the loop hit an odd row, I merged it with the next row (an even row) and added this new list to another list called _parsed_list_.
-
-```{r parse-line_data}
-# Loop through all rows to rebuild list,
-# joining sets of odd and even rows; 
-# start with 3 to skip headers
-parsed_list  <- list()
-for (i in 3:length(data_rows)) {
-  
-  # on odd rows, combine current and next row and add to new list
-  if(i %% 2 == 1) {
-    odd_row <- unlist(rows_split[i])
-    evn_row <- unlist(rows_split[i + 1])
-    row_list <- append(odd_row, evn_row)
-    parsed_list <- c(list(row_list), parsed_list)
-  }
-}
-```
-### Converting List to DataFrame
-Once I had the data per player onto a single line, I needed to convert it to dataframe. I first used _unlist_ to expand my data into a long format, putting every value on a single line. I then used the _matrix_ function into the right shape with 20 cols by 64 rows. I casted the result into a dataframe and set my headers.
+The resulting list still had each player's information spread accross two rows. I needed to convert it to dataframe. I first used _unlist_ to expand my data into a long format, putting every value on a single line. I then used the _matrix_ function into the right shape with 20 cols by 64 rows. I casted the result into a dataframe and set my headers.
 
 ```{r convert-list-to-df}
 # convert list to dataframe
-lines_df <- data.frame(matrix(unlist(parsed_list), nrow=length(parsed_list), ncol=num_cols, byrow = 1))
+parsed_list <- rows_split[3:length(rows_split)]
+lines_df <- data.frame(matrix(unlist(parsed_list),  ncol=num_cols, byrow = 1))
 # add column names
 names(lines_df) <- headers
+
 
 # convert dataframe to tibble and trim white space
 line_data <- as_tibble(lines_df) |>
    mutate(across(where(is.character), str_trim))
-head(line_data)
+dim(line_data)
 
+gt(line_data[1:5,])
 ```
 
 ## Reading using _read.delim_
 
-Although my data ended up in the correct format, I wasn't sure if I loved the approach. I had read that there were performance benefits of using dplyr and tidyr over for loops. I opted to give it another shot, this time using the _read.delim_ function declare my separators and remove blank columns ahead of time. This method also had the added benefit of returning a dataframe, so I didn't need to convert it as in the last step. The record breaks ("---") converted in NAs so I used _drop_na_ to remove these rows from my dataset.
+Although my data ended up in the correct format, I wasn't sure if I loved the approach. I opted to try using the _read.delim_ function declare my separators and remove blank columns ahead of time. This method also had the added benefit of returning a dataframe, so I didn't need to convert it as in the last step. The record breaks ("---") converted in NAs so I used _drop_na_ to remove these rows from my dataset.
 
 ```{r read_delim_ex}
 # read text file usig read.delim
@@ -97,8 +80,9 @@ delim_data <- read.delim(file, header=FALSE, sep="|", skip=4, skipNul=1, blank.l
 delim_data_df <- Filter(function(x)!all(is.na(x)), delim_data) |>
   drop_na()
 ```
+
 ### Consolidating Rows
-Similar to my for loop test, I used the modulo within the _slice_ function to split my data rows into two dataframes, each containing half of the record's data. I added a column for the row number, which I used as my key when stitching the dataframes back together using _merge_ function. I later dropped the row_id column and declared my new dataframes column names. There's probabbly a more elegant way to do this, but I wasn't able to find a method that worked.
+I used the modulo within the _slice_ function to split my data rows into two dataframes, each containing half of the record's data. I added a column for the row number, which I used as my key when stitching the dataframes back together using _merge_ function. I later dropped the row_id column and declared my new dataframes column names. There's probably a more elegant way to do this, but I wasn't able to find a method that worked.
 
 ```{r merging-rows-to-create-records}
 # split data into two dfs
