@@ -1,0 +1,166 @@
+---
+title: "Project 2"
+author: "Marco Castro"
+date: "2024-10-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(reshape2)
+library(gt)
+library(ggpubr)
+library(stringr)
+```
+
+
+
+
+
+## Florida Demographics
+
+
+```{r fl-load-data}
+# Load dataset dictionary
+housing_dictionary <- read_csv("data_dictionary_1-FL.csv") |>
+  select(field_name, dk_column_name, year)
+
+# Load dataset as df
+housing_df <- read_csv("data_1-FL.csv")
+
+# pivot long using geoid as the key
+  #
+long_housing_df <- housing_df |>
+  subset(select = -c( geoid_year : county_fips_code )) |>
+  melt(id='geoid')
+  
+head(long_housing_df)
+```
+
+
+```{r tidy-acs-dict}
+# create a subset of the housing dictionary
+# removing duplicates and cleaning up field names
+acs_dictionary <- housing_dictionary |>
+  filter(str_detect(dk_column_name, "^ACS")) |>
+  mutate(
+    type = str_sub(field_name, -1), 
+    field_name = str_sub(field_name, 1, -2)
+  ) |>
+  filter(type=="e") |>
+  mutate(across('dk_column_name', str_replace, ' - Estimate', '')) |>
+  select(field_name, dk_column_name, year)
+```
+
+```{r filter_acs}
+
+# pattern to find ACS fields 
+pattern_acs <- regex(
+  r"(
+    ^([bs]    # start with b or s 
+    (\d{4})   # followed by 4 chars
+    [\d]?     # optional number
+    )|        # or
+    (dp05)    # dp5
+    [_]+      # followed by a _ then a sequence of numbers
+  )", 
+  comments = TRUE
+)
+
+acs <- long_housing_df |>
+  filter(str_detect(variable, pattern_acs)) |>
+  mutate(
+    type = str_sub(variable, -1), 
+    variable = str_sub(variable, 1, -2)
+  ) |>
+  pivot_wider(
+    names_from = type,
+    values_from = value,
+    names_prefix = "type_"
+  ) |>
+  rename(c("estimate" = "type_e", "margin_of_error" = "type_m")) |> 
+  extract(
+    col="geoid", 
+    into=c("state","county","tract"),
+    regex="([0-9]{2})([0-9]{3})([0-9]{4})"
+  ) |>
+  left_join(acs_dictionary, join_by(variable == field_name)) |>
+  separate(
+    col = dk_column_name,
+    into = c('datasource', 'dataset', 'variable_1', 'variable_2'),
+    sep = " - "
+  )  
+
+
+
+head(acs)
+
+#acs_margin_of_error <- acs |>
+#  filter(str_detect(variable, "[e]$"))
+
+#acs_vars <- acs |>  distinct(variable) |> head()
+  
+```
+
+```{r filter_ejs}
+# incomplete
+# pattern to find EJS fields
+pattern_ejs <- regex(
+  r"(
+    ^[dp]     # start with d or p
+    (\d{1})?  # optional number
+    [_]+      # followed by a _ then a sequence of numbers
+  )", 
+  comments = TRUE
+)
+
+ejs <- long_df |>
+  filter(str_detect(variable, pattern_ejs) & !(variable %in% acs_vars)) |>
+  distinct(variable)
+  
+ejs
+```
+
+## Marriage Dataset
+
+```{r marriage-read-in}
+messy_marriage_data <- read_csv("https://raw.githubusercontent.com/fivethirtyeight/data/refs/heads/master/marriage/both_sexes.csv")
+
+# pivot data to long format, converting cols to demographic and age col
+pivoted_marriage_data <- messy_marriage_data |>
+  pivot_longer(
+    cols = !(year|date),
+    names_to = c("demographic", "age"), 
+    names_pattern = "([A-Za-z_]+)_([0-9]+)$",
+    values_to = "value"
+  ) |>
+  mutate(age = ifelse(is.na(age), age, paste(substr(age, 1,2),substr(age, 3,4), sep="-"))) |>
+  mutate(category = "education") |>
+  mutate(category = ifelse(str_detect(demographic,"poor|mid|rich"), "economic status", category)) |>
+  mutate(category = ifelse(str_detect(demographic,"Midwest|South|Mountain|Pacific"), "region", category)) |>
+ mutate(category = ifelse(str_detect(demographic,"White|Black|Hisp|Asian"), "race", category)) |>
+  relocate(category, .before = demographic)
+
+# make df with child status
+married_child_status <- pivoted_marriage_data   |>
+  filter(str_detect(demographic,"n?o?kids")) |>
+  extract(col="demographic", into=c('kids', 'demographic'), regex = "(n?o?kids)_?([A-Za-z]*)") 
+
+# make df of all other demographics that don't include child status
+married_other_demographics <- pivoted_marriage_data   |>
+  filter(!str_detect(demographic,"n?o?kids"))
+
+head(married_other_demographics)
+```
+
+## DOHMH New York City Restaurant Inspection Results
+
+
+Source:
+https://catalog.data.gov/dataset/dohmh-new-york-city-restaurant-inspection-results
+```{r marriage-read-in}
+messy_inspection_data <-read_csv("DOHMH_New_York_City_Restaurant_Inspection_Results.csv");
+
+```
