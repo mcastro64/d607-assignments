@@ -201,12 +201,19 @@ p4 <- "(.).\\1.\\1"
 p5 <- "(.)(.)(.).*\\3\\2\\1"
 ```
 
-_a: (.)\1\1_
+_a: (.)\1_
 Returns true if string contains any characters followed by \1. For example "T\1" or "e\1" in the code block below:
 
 ```{r regexp-q1a}
-test_str <- c('TTT')
+
+p1b <- regex(
+  r"((.)\1)",  comments = TRUE
+)
+
+test_str <- c('TTT', ('T\1'))
 str_detect(test_str, p1)
+
+str_detect(test_str, p1b)
 ```
 
 _b: "(.)(.)\\2\\1"_
@@ -221,8 +228,17 @@ _c: (..)\1_
 Returns true if string contains two characters followed by \1. For example "Ts\1" or "le1" in the code block below:
 
 ```{r regexp-q1c}
-test_str <- c('TsTs\1sxded', 'apple\1', 'carrot', '\1brocoli', 'banana')
+test_str <- c('TsTssxded', 'apple\1', 'carrot', '\1brocoli', 'banana')
+p3b <- regex(
+  r"((..)\1)",  comments = TRUE
+)
+
 str_detect(test_str, p3)
+
+
+
+str_detect(test_str, p3b)
+
 ```
 
 _d:  "(.).\\1.\\1"_

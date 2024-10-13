@@ -13,25 +13,48 @@ library(reshape2)
 library(gt)
 library(ggpubr)
 library(stringr)
+
+
 ```
 
+# Overview 
 
+For project 2, we were asked to import three untidy datasets, make it tidy and conduct some analysis with the newly tranformed dataframe. For my project, I worked with the following:
 
-
+* Florida Demographics 
+* Marital Status (1960-2020)
+* Spotify Most Streamed Songs of 2023
 
 ## Florida Demographics
 
+This [dataset](https://github.com/datakind/datakit-housing-fall-2024?) was compiled to help assess people's risk of loosing their homes in Florida. While each row represents one Census tract, it includes various observations such as income and poverty level by age, sex, and race, and median household costs by owner/renter status. I aimed to analyze this demographic data to understand which groups might be at higher risk. 
+
+First I created a subset of the housing dictionary using the regular expression to filter for rows beginning with "ACS". The ACS provides the estimated value and margin of error for each observation which are flagged in the variable name with an "e" or "m" suffix respectively. I dropped all rows with the "m" flag so that the _field_name_ column could be reused later when tidying up the main dataset.
+
+```{r tidy-acs-dict}
+
+# Load dataset dictionary and
+# create a subset of the housing dictionary
+# removing duplicates and cleaning up field names
+acs_dictionary <- read_csv("data_dictionary_1-FL.csv") |>
+  select(field_name, dk_column_name, year) |>
+  filter(str_detect(dk_column_name, "^ACS") & str_detect(field_name, "e$")) |>
+  mutate(
+    field_name = str_sub(field_name, 1, -2),
+    across('dk_column_name', str_replace, ' - Estimate', ''),  
+    across('dk_column_name', str_replace, 'ACS - ', '')
+  )
+```
+
+
+Next, I imported the main dataset and used the melt package to convert it into a long dataframe where all indicator columns were split into rows; observations were broken up in a newly created variables column and  value column set for each Census track (geoid0.
 
 ```{r fl-load-data}
-# Load dataset dictionary
-housing_dictionary <- read_csv("data_dictionary_1-FL.csv") |>
-  select(field_name, dk_column_name, year)
 
 # Load dataset as df
 housing_df <- read_csv("data_1-FL.csv")
 
 # pivot long using geoid as the key
-  #
 long_housing_df <- housing_df |>
   subset(select = -c( geoid_year : county_fips_code )) |>
   melt(id='geoid')
@@ -40,19 +63,6 @@ head(long_housing_df)
 ```
 
 
-```{r tidy-acs-dict}
-# create a subset of the housing dictionary
-# removing duplicates and cleaning up field names
-acs_dictionary <- housing_dictionary |>
-  filter(str_detect(dk_column_name, "^ACS")) |>
-  mutate(
-    type = str_sub(field_name, -1), 
-    field_name = str_sub(field_name, 1, -2)
-  ) |>
-  filter(type=="e") |>
-  mutate(across('dk_column_name', str_replace, ' - Estimate', '')) |>
-  select(field_name, dk_column_name, year)
-```
 
 ```{r filter_acs}
 
@@ -81,6 +91,10 @@ acs <- long_housing_df |>
     names_prefix = "type_"
   ) |>
   rename(c("estimate" = "type_e", "margin_of_error" = "type_m")) |> 
+  mutate(
+    estimate = as.double(estimate),
+    margin_of_error = as.double(margin_of_error)
+  ) |>
   extract(
     col="geoid", 
     into=c("state","county","tract"),
@@ -89,20 +103,33 @@ acs <- long_housing_df |>
   left_join(acs_dictionary, join_by(variable == field_name)) |>
   separate(
     col = dk_column_name,
-    into = c('datasource', 'dataset', 'variable_1', 'variable_2'),
+    into = c('datasource', 'variable_1', 'variable_2', 'variable_3'),
     sep = " - "
-  )  
-
-
+  ) |>
+  subset(select = -c( variable, datasource ))
 
 head(acs)
 
-#acs_margin_of_error <- acs |>
-#  filter(str_detect(variable, "[e]$"))
+income_inequality <- acs |>
+  filter(variable_1 == "Gini Index of Income Inequality")
 
-#acs_vars <- acs |>  distinct(variable) |> head()
-  
+employment_status <- acs |>
+  filter(str_detect(variable_1, "Employment Status"))
+
+below_poverty_level <- acs |>
+  filter(str_detect(variable_1, "Below Poverty"))
+
+median_hh_income <- acs |>
+  filter(str_detect(variable_1, "Median Household Income"))
+
+median_earnings <- acs |>
+  filter(str_detect(variable_1, "Median Earning"))
+
+population_health_insurance <- acs |>
+  filter(str_detect(variable_1, "Health Insurance"))
+
 ```
+
 
 ```{r filter_ejs}
 # incomplete
@@ -116,20 +143,26 @@ pattern_ejs <- regex(
   comments = TRUE
 )
 
-ejs <- long_df |>
-  filter(str_detect(variable, pattern_ejs) & !(variable %in% acs_vars)) |>
-  distinct(variable)
-  
-ejs
+#ejs <- long_housing_df |>
+#  filter(str_detect(variable, pattern_ejs) & !(variable %in% acs_vars)) |>
+#  distinct(variable)
+ 
 ```
 
 ## Marriage Dataset
+
+The marriage dataset was suggested by [DC](https://brightspace.cuny.edu/d2l/le/437180/discussions/threads/520914/View). In their post, they suggest the following analysis
+
+> Using this dataset I would analyze the correlation between the different educational, geographical and social economic status variables to determine if there are certain factors that contribute to the instances of marriages / lack of marriages.
+
+
+
 
 ```{r marriage-read-in}
 messy_marriage_data <- read_csv("https://raw.githubusercontent.com/fivethirtyeight/data/refs/heads/master/marriage/both_sexes.csv")
 
 # pivot data to long format, converting cols to demographic and age col
-pivoted_marriage_data <- messy_marriage_data |>
+marriage_pivoted_df <- messy_marriage_data |>
   pivot_longer(
     cols = !(year|date),
     names_to = c("demographic", "age"), 
@@ -137,30 +170,234 @@ pivoted_marriage_data <- messy_marriage_data |>
     values_to = "value"
   ) |>
   mutate(age = ifelse(is.na(age), age, paste(substr(age, 1,2),substr(age, 3,4), sep="-"))) |>
-  mutate(category = "education") |>
-  mutate(category = ifelse(str_detect(demographic,"poor|mid|rich"), "economic status", category)) |>
-  mutate(category = ifelse(str_detect(demographic,"Midwest|South|Mountain|Pacific"), "region", category)) |>
- mutate(category = ifelse(str_detect(demographic,"White|Black|Hisp|Asian"), "race", category)) |>
-  relocate(category, .before = demographic)
+  mutate(
+    category = "education",
+    category = ifelse(str_detect(demographic,"poor|mid|rich"), "economic status", category),
+    category = ifelse(str_detect(demographic,"Midwest|South|Mountain|Pacific"), "region", category),
+    category = ifelse(str_detect(demographic,"White|Black|Hisp|Asian"), "race", category),
+    demographic = as.factor(demographic)
+  ) |>
+  relocate(category, .before = demographic) 
+```
+
+```{r married-with-wo-children}
+# make df of all  demographics that don't include child status
+marriage_demographics_df <- marriage_pivoted_df   |>
+  filter(!str_detect(demographic,"n?o?kids"))
 
 # make df with child status
-married_child_status <- pivoted_marriage_data   |>
+marriage_demographics_by_child_status_df <- marriage_pivoted_dd   |>
   filter(str_detect(demographic,"n?o?kids")) |>
   extract(col="demographic", into=c('kids', 'demographic'), regex = "(n?o?kids)_?([A-Za-z]*)") 
 
-# make df of all other demographics that don't include child status
-married_other_demographics <- pivoted_marriage_data   |>
-  filter(!str_detect(demographic,"n?o?kids"))
-
-head(married_other_demographics)
+head(marriage_demographics_df)
 ```
 
-## DOHMH New York City Restaurant Inspection Results
 
+```{r plot-marriage}
 
-Source:
-https://catalog.data.gov/dataset/dohmh-new-york-city-restaurant-inspection-results
-```{r marriage-read-in}
-messy_inspection_data <-read_csv("DOHMH_New_York_City_Restaurant_Inspection_Results.csv");
+# filters df by category and plots as facet
+plot_by_cat <- function(cat, forder) {
+  
+  df <- marriage_demographics_df |>
+    filter(str_detect(category, cat)) |>
+    mutate(
+      demographic = factor(demographic, levels = forder)
+    )
+  
+  
+  cat_uc <- paste(toupper(substr(cat, 1, 1)), substr(cat, 2, str_length(cat)), sep="")
+  
+  ggplot(df, aes(x=date, y=value)) +
+    geom_line(aes(color=age)) +
+    facet_wrap(~demographic) +
+    geom_smooth(method=lm) + 
+    scale_y_continuous(label=scales::percent) +
+    labs(title = paste(cat_uc, " vs Age", sep="")) +
+    theme(plot.title = element_text(hjust = 0.5))
+  }
+
+plot_by_cat("economic status", c('poor', 'mid', 'rich'))
+plot_by_cat("education", c('all','NE', 'GD', 'HS', 'SC', 'BAo' , 'BAp', 'MA'))
+plot_by_cat("race", c('Black','White','Hisp'))
+plot_by_cat("region", c("Pacific","Mountain","Midwest","South"))
 
 ```
+
+## Spotify's Most Streamed Songs of 2023
+
+_Spotify's Most Streamed Songs_ dataset was suggested by [JZ](https://brightspace.cuny.edu/d2l/le/437180/discussions/threads/499868/View). I was able retrieve from  [Kaggle](https://www.kaggle.com/datasets/rajatsurana979/most-streamed-spotify-songs-2023) as downloadable CSV.
+
+### Separating the artists from track information
+
+After importing the dataset, I proceeded to create a separate artist table.: 
+1. Created an id column for each of the tracks based on the row nomner
+2. Created a subset of track_ids and artist(s). Since some tracks had multiple artists credited, I split these into their own row using _separate_longer_delim_.
+3. From the keys dataframe, I created a new dataframe of unique artists. These were also given their own id number
+4. The artist df was left joined to the keys df by artist name. I dropped the artist_name column to get my final keys df.
+
+Finally, I created a tracks subset from the original that contained single observations such as Beats per Minute (bpm) and Key. All other columns that contain multiple observations between them will were tidied for analysis in the next section.  
+
+```{r spotify-read-in}
+# After reading in the file 
+# Add row numbers as id column
+sptfy_messy_data <- read_csv("spotify-2023.csv", locale = locale(encoding = "Latin1"))  |>
+  mutate(track_id = row_number()) |>
+  relocate(track_id, .before = track_name) |>
+  rename(c('artists' = `artist(s)_name`)) 
+
+# create joiner table 
+sptfy_artists_key <- sptfy_messy_data |>
+  subset(select=c(track_id, artists)) |>
+  separate_longer_delim(cols = c(artists), delim="," ) |> 
+  mutate(artists = str_trim(artists))
+
+# make distinct list of artists and give them their own id
+sptfy_artists_by_name <- sptfy_artists_key |>
+  distinct(artists) |>
+  mutate(artist_id = row_number()) |>
+  relocate(artist_id, .before = artists)
+
+# join artist list to keys to bring unique artist idea 
+sptfy_artists_key <- sptfy_artists_key |>
+  left_join(sptf_artists_by_name, join_by(artists == artists)) |>
+  subset(select=-c(artists))
+
+# create subset of track info
+sptf_tracks <- sptfy_messy_data |>
+  subset(select=c(track_id,track_name, artist_count:released_day, streams, bpm, key, mode))
+```
+
+#### Example
+__Which key does Bad Bunny prefer to use for his songs?__
+
+```{r bad-bunny}
+get_artist_df <-function(name) {
+  df <- sptfy_artists_by_name |>
+    filter(artists == name) |>
+    left_join(sptfy_artists_key, join_by(artist_id == artist_id)) |>
+    left_join(sptfy_tracks, join_by(track_id == track_id))
+}
+
+ggplot(subset(get_artist_df(c("Bad Bunny")), !is.na(key)), aes(y=key)) +
+  geom_bar()
+```
+
+
+### Addressing columns with Multiple Observations
+
+This next section uses _pivot_longer_ to transform the remaining columns into groupable variables with their respective values. From this long df, I subsetted a new _spotify_metrics_ df filtering by variables that have have a percent sign(%) in their name. These will be used for comparing dancibility, valence, energy, acousticness, instrumentalness, liveliness and speechiness. 
+
+
+```{r spotify-pivot}
+# create subset of non-track info
+# and pivot remaining columns into
+# format id, variable, values 
+sptfy_long_df <- sptfy_messy_data |>
+  subset(select=-c(track_name:released_day, streams, bpm, key, mode)) |>
+  pivot_longer(
+    cols = !track_id,
+    names_to = 'variable',
+    values_to = 'value',
+    values_transform = list(value=as.character) # convert to chars
+  )
+
+# subset spotify metrics where column names
+# match percent regex
+sptfy_metrics <- sptfy_long_df |>
+  filter(str_detect(variable, "([A-Za-z]+)_%")) |>
+  mutate(
+    variable = substr(variable, 0, str_length(variable)-2 ),
+    value = as.integer(value) # convert value back to int
+  )
+```
+
+### Exploratory Analysis
+
+### Example: avg [variable] per track
+```{r spotify-mean-of-metrics}
+
+# func: get variable mean for any df
+get_variable_mean <- function(df) {
+  new_df <- df |>
+    group_by(variable) |>
+    summarise(
+      mean_value = mean(value)
+    ) 
+}
+
+# plot the means of the variables      
+ggplot(get_variable_mean(sptfy_metrics), aes(x=mean_value, y=variable)) +
+  geom_bar(stat = "identity") +
+  labs(title='Variable Means')
+```
+
+__Example: Is there a correlation between BPMs and Spotify's metrics__
+
+```{r spotify-bpms-v-metrics}
+add_column_from_tracks <- function(df, col) {
+  df_cols <- names(df) |>
+    append(col)
+  new_df <- df |>
+    left_join(sptfy_tracks, join_by(track_id == track_id)) |>
+    subset(select = df_cols)
+}
+
+sptfy_metrics_with_bpm <- add_column_from_tracks(sptfy_metrics, "bpm")
+
+ggplot(metrics_with_bpm, aes(x=value, y=bpm)) +
+  geom_point()  + 
+  scale_x_continuous(labels = function(x) paste0(x, "%")) +
+  facet_wrap(~variable)  +
+  labs(title='Comparing BPM vs ___') +
+  geom_smooth(method=lm) 
+  
+```
+
+__#Example: __
+
+```{r bpm-v-variable-log-scale}
+
+ggplot(sptfy_metrics_with_bpm, aes(x=value, y=bpm)) +
+  geom_point()  + 
+  scale_x_continuous(labels = function(x) paste0(x, "%")) +
+	scale_y_log10()  + 
+  facet_wrap(~variable) +
+  labs(title='Comparing Log BPM vs Log ___')
+```
+
+
+```{r variable-boxplot}
+ggplot(sptfy_metrics, aes(y=variable, x=value)) +
+  geom_boxplot() +
+  labs(title='Boxplot of Variables')
+```
+
+```{r spotify-ranking-by-streamer}
+# breakdown of charts and playlists by streamer
+sptfy_charts_playlists <- sptfy_long_df |>
+  filter(str_detect(variable, "([A-Za-z_]+)_(charts|playlists)")) |>
+  mutate(
+    variable = str_sub(variable, 4, -1),
+    value = as.integer(value)
+  ) |>
+  separate(
+    col = variable,
+    into = c('streamer', 'type'),
+    sep = "_"
+  ) |>
+  pivot_wider(
+    names_from = type,
+    values_from = value,
+    names_prefix = "num_"
+  ) 
+
+  gt(sptfy_charts_playlists)
+
+ggplot(sptfy_charts_playlists, aes(x=streamer, y=num_charts)) +
+  geom_bar(position='dodge', stat='summary', fun='mean')
+
+ggplot(sptfy_charts_playlists, aes(x=streamer, y=num_playlists)) +
+  geom_bar(position='dodge', stat='summary', fun='mean')
+```
+
