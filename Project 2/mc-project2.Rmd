@@ -29,6 +29,10 @@ For project 2, we were asked to import three untidy datasets, make it tidy and c
 
 This [dataset](https://github.com/datakind/datakit-housing-fall-2024?) was compiled to help assess people's risk of loosing their homes in Florida. While each row represents one Census tract, it includes various observations such as income and poverty level by age, sex, and race, and median household costs by owner/renter status. I aimed to analyze this demographic data to understand which groups might be at higher risk. 
 
+
+
+### Importing and Tidying the Housing Dictionary Dataset
+
 First I created a subset of the housing dictionary using the regular expression to filter for rows beginning with "ACS". The ACS provides the estimated value and margin of error for each observation which are flagged in the variable name with an "e" or "m" suffix respectively. I dropped all rows with the "m" flag so that the _field_name_ column could be reused later when tidying up the main dataset.
 
 ```{r tidy-acs-dict}
@@ -46,8 +50,9 @@ acs_dictionary <- read_csv("data_dictionary_1-FL.csv") |>
   )
 ```
 
+### Importing the Main Dataset
 
-Next, I imported the main dataset and used the melt package to convert it into a long dataframe where all indicator columns were split into rows; observations were broken up in a newly created variables column and  value column set for each Census track (geoid0.
+Next, I imported the main dataset and used the melt package to convert it into a long dataframe where all indicator columns were split into rows; observations were broken up in a newly created variables column and  value column set for each Census track in the _geoid_ column.
 
 ```{r fl-load-data}
 
@@ -56,13 +61,15 @@ housing_df <- read_csv("data_1-FL.csv")
 
 # pivot long using geoid as the key
 long_housing_df <- housing_df |>
-  subset(select = -c( geoid_year : county_fips_code )) |>
+  subset(select = -c( geoid_year : county_fips_code)) |>
   melt(id='geoid')
   
 head(long_housing_df)
 ```
 
+### Tidying up the DF
 
+First, I needed to limit my rows to observations related to ACS. I constructed a regular expression to filter these rows accordingly. As with the data dictionary df, the ACS observations were divided into two rows: 1) estimate and 2) margin of error. I first extracted the flags "e" and "m" into their own column, then used _pivot_wider_ to pull the estimate and margin of error values into a single row per observation. I broke out the geoid into three columns based on their numerical code representing the state, county, and tract ids. I then _left_joined_ the dataframe with my dictionaty dataframe and separated out the _dk_column_name_ from the dictionary into three columns which will be used for grouping my data into distinct indicators to help visualize and analyse the data. 
 
 ```{r filter_acs}
 
@@ -91,6 +98,7 @@ acs <- long_housing_df |>
     names_prefix = "type_"
   ) |>
   rename(c("estimate" = "type_e", "margin_of_error" = "type_m")) |> 
+  filter(estimate != '-666666666') |>
   mutate(
     estimate = as.double(estimate),
     margin_of_error = as.double(margin_of_error)
@@ -103,51 +111,142 @@ acs <- long_housing_df |>
   left_join(acs_dictionary, join_by(variable == field_name)) |>
   separate(
     col = dk_column_name,
-    into = c('datasource', 'variable_1', 'variable_2', 'variable_3'),
+    into = c('variable_1', 'variable_2', 'variable_3'),
     sep = " - "
   ) |>
-  subset(select = -c( variable, datasource ))
+  subset(select = -c(variable))
 
 head(acs)
-
-income_inequality <- acs |>
-  filter(variable_1 == "Gini Index of Income Inequality")
-
-employment_status <- acs |>
-  filter(str_detect(variable_1, "Employment Status"))
-
-below_poverty_level <- acs |>
-  filter(str_detect(variable_1, "Below Poverty"))
-
-median_hh_income <- acs |>
-  filter(str_detect(variable_1, "Median Household Income"))
-
-median_earnings <- acs |>
-  filter(str_detect(variable_1, "Median Earning"))
-
-population_health_insurance <- acs |>
-  filter(str_detect(variable_1, "Health Insurance"))
-
 ```
 
 
-```{r filter_ejs}
-# incomplete
-# pattern to find EJS fields
-pattern_ejs <- regex(
-  r"(
-    ^[dp]     # start with d or p
-    (\d{1})?  # optional number
-    [_]+      # followed by a _ then a sequence of numbers
-  )", 
-  comments = TRUE
-)
+### Visualizing Income Inequality
 
-#ejs <- long_housing_df |>
-#  filter(str_detect(variable, pattern_ejs) & !(variable %in% acs_vars)) |>
-#  distinct(variable)
+With the dataset transformed into a tidy dataset, I am now able to easily visualize data by indicator type(s). I can use the values store in variable_1 to filter the data by indicator, create groups and summarise data. For example, I created fitered data by "Gini Index" grouped by counties in Florida. Once the data is grouped, I was able to _summarise_ the mean to calculate the average value of all census tract in the County. I was then able to visualize the data with a density_plot to quickly get a sense of the distribution of averages.
+
+```{r indicator-dfs-income-inequality}
+
+# filter by indicator and plot a density plot
+filterFor <- function(f, ntl) {
+  df <- acs |>
+    filter(str_detect(variable_1, f)) |> 
+    group_by(county) |>
+    summarise(
+      avg_estimate = mean(estimate)
+    )
+  
+  num_counties <- df |>
+    count()
+  
+  num_counties_under_ntl <- df |>
+    filter(avg_estimate < ntl) |>
+    count()
+  
+   peak <- df |>
+     summarise(
+       min = min(avg_estimate),
+       max = max(avg_estimate),
+       mean = mean(avg_estimate),
+       median = median(avg_estimate),
+       counties_under_ntl = num_counties_under_ntl,
+       total_counties = num_counties
+     )
+  
+  # build plot
+  print(ggplot(df, aes(avg_estimate)) +
+    geom_density() +
+    geom_vline(xintercept = peak$mean) +
+    labs(
+      x ='', 
+      y='',
+      title=paste(f,'by County')
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.title.y=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank(),
+    ))
+  
+  peak
+}
+
+# plat the Gini Index
+income_inequality <- filterFor("Gini Index", 0.417) 
+income_inequality
+```
+
+### Visualizing Housing Costs
+
+I created a function to be able to filter and group my dataframe by multiple variables and used this to plot a graph of housing costs by homeownership status (owners and renters). We can overlap the result to compare the results.
+
+
+```{r indicator-dfs-housing-costs}
+
+variable_by <- function(x, y, f) { 
+  df <- acs |>
+    filter(str_detect(variable_1, x) & variable_2 == y) |> 
+    group_by(county, variable_3) |>
+    summarise(
+      avg_estimate = mean(estimate)
+    ) |>
+  ungroup()
+
+ varplot <- ggplot(df, aes(avg_estimate, fill=variable_3)) +
+    geom_density(alpha  = 0.4) +
+    labs(
+      x ='', 
+      y='',
+      title=paste(x, y)
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.title.y=element_blank(),
+      #axis.text.y=element_blank(),
+      axis.ticks.y=element_blank(),
+      legend.position="bottom"
+    )
  
+  if (f == "facet") {
+    varplot <- varplot + facet_wrap(~variable_3)
+  }
+
+   varplot 
+}
+
+# plot housing costs by ownership status
+variable_by("Median Monthly Housing Cost","By ownership status", "")
+
 ```
+
+### Visualizing Income and Poverty Level
+
+I applied a similar method to generate density plots for Median Household Income and Below Poverty Level but breaking out our findings by Race, Age and Sex. Having created a function, I can now just call _variable_by_ and pass in the name of the indicator I want to explore and which variable I want to group by to output the results from my tidy dataframe.
+
+
+```{r indicator-dfs-income}
+
+# plo poverty level by 
+variable_by("Below Poverty", "By Race", "facet")
+variable_by("Below Poverty", "By Age", "facet")
+variable_by("Below Poverty", "By Sex", "")
+
+# plot income by 
+variable_by("Median Household Income", "By Race of Householder", "facet")
+variable_by("Median Household Income", "By Age of Householder", "facet")
+
+# earnings by sex
+variable_by("Median Earnings", "By Sex", "")
+
+```
+
+### Conclusion
+
+We see that the mean Gini Index in Florida is `r income_inequality$mean` in 2020, higher than the Gini index for the US of 0.417 when calculated using income after taxes and transfers [Source](https://www.cbo.gov/publication/59757). However, `r income_inequality$counties_under_ntl` out of `r income_inequality$total_counties` counties had Gini Indeces below the national index, with the county facing the highest county having an index of `r income_inequality$min`. Renters also appear to have higher monthly housing costs on average than homeowners.
+
+Black or African Americans appear to have higher representation among groups below the poverty level though had comperable income levels. Not surprising, people 15-24 years old and 65+ had lower household income, suggesting that minors, young adults and seniors were more likely to face economic hardship. 
+
+---
 
 ## Marriage Dataset
 
@@ -155,10 +254,11 @@ The marriage dataset was suggested by [DC](https://brightspace.cuny.edu/d2l/le/4
 
 > Using this dataset I would analyze the correlation between the different educational, geographical and social economic status variables to determine if there are certain factors that contribute to the instances of marriages / lack of marriages.
 
-
+After importing the CSV, I used _pivot_longer_ to transform the table from a wide to a long format. I users a regular expression to break up all columns by "demographic" and "age", excuding the year and date columns which will be used as my keys. I used _mutate_ to create a new column for _categories_, using the values of the _demographic_ column to assign its value. I also reformated the _demographic_ and _age_ columns by casting them as factors. Next I used _str_detect_ to filter out all observations that disaggregated data by child status from the dataframe _marriage_demographics_df_ of total values irregardless of child status.
 
 
 ```{r marriage-read-in}
+
 messy_marriage_data <- read_csv("https://raw.githubusercontent.com/fivethirtyeight/data/refs/heads/master/marriage/both_sexes.csv")
 
 # pivot data to long format, converting cols to demographic and age col
@@ -169,8 +269,7 @@ marriage_pivoted_df <- messy_marriage_data |>
     names_pattern = "([A-Za-z_]+)_([0-9]+)$",
     values_to = "value"
   ) |>
-  mutate(age = ifelse(is.na(age), age, paste(substr(age, 1,2),substr(age, 3,4), sep="-"))) |>
-  mutate(
+  mutate(age = ifelse(is.na(age), age, paste(substr(age, 1,2),substr(age, 3,4), sep="-")),
     category = "education",
     category = ifelse(str_detect(demographic,"poor|mid|rich"), "economic status", category),
     category = ifelse(str_detect(demographic,"Midwest|South|Mountain|Pacific"), "region", category),
@@ -178,23 +277,21 @@ marriage_pivoted_df <- messy_marriage_data |>
     demographic = as.factor(demographic)
   ) |>
   relocate(category, .before = demographic) 
-```
 
-```{r married-with-wo-children}
 # make df of all  demographics that don't include child status
 marriage_demographics_df <- marriage_pivoted_df   |>
   filter(!str_detect(demographic,"n?o?kids"))
 
-# make df with child status
-marriage_demographics_by_child_status_df <- marriage_pivoted_dd   |>
-  filter(str_detect(demographic,"n?o?kids")) |>
-  extract(col="demographic", into=c('kids', 'demographic'), regex = "(n?o?kids)_?([A-Za-z]*)") 
-
 head(marriage_demographics_df)
 ```
 
+### Visualizing Marriage Statistics
 
-```{r plot-marriage}
+Now that the data is in tidy format, I can quickly conduct some exploratory analysis. I created a function to filter out the dataframe by category and visualize the data with facets. This function takes two variables: 1) the category that we want to filter by and 2) a list of strings in the order we want to display the dependent variable. 
+
+I visualized the data comparing the percent of couples getting married since 1960 broken up by age for economic status, education, race, and region. These were plotted as lines for each of three age groups in the dataset: a) 25-35, b) 35-44, and c) 45-54. I used _geom_smooth_ to show a trend line with confidence intervals.
+
+```{r visualize-marriage}
 
 # filters df by category and plots as facet
 plot_by_cat <- function(cat, forder) {
@@ -218,15 +315,21 @@ plot_by_cat <- function(cat, forder) {
   }
 
 plot_by_cat("economic status", c('poor', 'mid', 'rich'))
-plot_by_cat("education", c('all','NE', 'GD', 'HS', 'SC', 'BAo' , 'BAp', 'MA'))
 plot_by_cat("race", c('Black','White','Hisp'))
+plot_by_cat("education", c('all','NE', 'GD', 'HS', 'SC', 'BAo' , 'BAp', 'MA'))
 plot_by_cat("region", c("Pacific","Mountain","Midwest","South"))
 
 ```
 
-## Spotify's Most Streamed Songs of 2023
+### Conclusion
+Not surprisingly, couples ages 25-34 got married more then couples of other age groups accross all four categories that we explored: economic status, education, race, and region. Marriage rates appear to trending upwards possibly due population changes throughout the last 60 years.
 
-_Spotify's Most Streamed Songs_ dataset was suggested by [JZ](https://brightspace.cuny.edu/d2l/le/437180/discussions/threads/499868/View). I was able retrieve from  [Kaggle](https://www.kaggle.com/datasets/rajatsurana979/most-streamed-spotify-songs-2023) as downloadable CSV.
+#### Differences by category
+While the percentage of couples of all three economic status was somewhat similar in 1960, couples categorized as poor married at higher rates in the last 20 years than other groups, in particular for ages 25-34. Couples categorized as rich saw a decline or slow down in marriage rates from 1960 to ~2005, but has seen an uptick since 20015. Like economic status, rates among Black, White and Hispanic couples were somewhat similar in 1960; while rates among White and Hispanics have remained similar, Black couples outpace other groups by nearly 20%.  Marriage rates appear fairly similar across all eight educational types and all four regions examined. 
+
+--- 
+
+## Spotify Most Streamed Songs of 2023
 
 ### Separating the artists from track information
 
@@ -260,16 +363,17 @@ sptfy_artists_by_name <- sptfy_artists_key |>
 
 # join artist list to keys to bring unique artist idea 
 sptfy_artists_key <- sptfy_artists_key |>
-  left_join(sptf_artists_by_name, join_by(artists == artists)) |>
+  left_join(sptfy_artists_by_name, join_by(artists == artists)) |>
   subset(select=-c(artists))
 
 # create subset of track info
-sptf_tracks <- sptfy_messy_data |>
+sptfy_tracks <- sptfy_messy_data |>
   subset(select=c(track_id,track_name, artist_count:released_day, streams, bpm, key, mode))
 ```
 
-#### Example
-__Which key does Bad Bunny prefer to use for his songs?__
+### Which key does Bad Bunny prefer to use for his songs?
+
+Now that we have the data in tidy form, I can filter the data easily I created a function to left joined the _sptfy_tracks_ to the _sptfy_artists_by_name_ through a joining table and filtered by the artist. In this example I filtered by "Bad Bunny" to plot a bar chart showing the number of songs in the dataset per musical key. Our chart shows that Bad Bunny preferred the key of C#.
 
 ```{r bad-bunny}
 get_artist_df <-function(name) {
@@ -310,11 +414,15 @@ sptfy_metrics <- sptfy_long_df |>
     variable = substr(variable, 0, str_length(variable)-2 ),
     value = as.integer(value) # convert value back to int
   )
+
+head(sptfy_metrics)
 ```
 
 ### Exploratory Analysis
 
-### Example: avg [variable] per track
+Because my data is now in tidy format, I can now group my data easily and perform summary calculations easily. In the following example, I use a function to filter by the metric I am passing though to obtain its average on a per track basis. I used a bar chart and boxplot to get different visualizations to get sense of the mean and distribution of the 7 Spotify specfic metrics data.
+
+
 ```{r spotify-mean-of-metrics}
 
 # func: get variable mean for any df
@@ -330,9 +438,16 @@ get_variable_mean <- function(df) {
 ggplot(get_variable_mean(sptfy_metrics), aes(x=mean_value, y=variable)) +
   geom_bar(stat = "identity") +
   labs(title='Variable Means')
+
+# variable-boxplot}
+ggplot(sptfy_metrics, aes(y=variable, x=value)) +
+  geom_boxplot() +
+  labs(title='Boxplot of Variables')
 ```
 
-__Example: Is there a correlation between BPMs and Spotify's metrics__
+#### Is there a correlation between BPMs and Spotify's metrics?
+
+In this example, I try to see if there is a correlation between Beats per Minute and the seven Spotify Metrics. 
 
 ```{r spotify-bpms-v-metrics}
 add_column_from_tracks <- function(df, col) {
@@ -345,59 +460,23 @@ add_column_from_tracks <- function(df, col) {
 
 sptfy_metrics_with_bpm <- add_column_from_tracks(sptfy_metrics, "bpm")
 
-ggplot(metrics_with_bpm, aes(x=value, y=bpm)) +
+ggplot(sptfy_metrics_with_bpm, aes(x=value, y=bpm)) +
   geom_point()  + 
   scale_x_continuous(labels = function(x) paste0(x, "%")) +
   facet_wrap(~variable)  +
   labs(title='Comparing BPM vs ___') +
   geom_smooth(method=lm) 
   
-```
-
-__#Example: __
-
-```{r bpm-v-variable-log-scale}
 
 ggplot(sptfy_metrics_with_bpm, aes(x=value, y=bpm)) +
   geom_point()  + 
-  scale_x_continuous(labels = function(x) paste0(x, "%")) +
+ scale_x_log10()  + 
 	scale_y_log10()  + 
   facet_wrap(~variable) +
-  labs(title='Comparing Log BPM vs Log ___')
+  labs(title='Comparing Log BPM vs Log ___') +
+  geom_smooth(method=lm) 
 ```
 
+### Conclusion
 
-```{r variable-boxplot}
-ggplot(sptfy_metrics, aes(y=variable, x=value)) +
-  geom_boxplot() +
-  labs(title='Boxplot of Variables')
-```
-
-```{r spotify-ranking-by-streamer}
-# breakdown of charts and playlists by streamer
-sptfy_charts_playlists <- sptfy_long_df |>
-  filter(str_detect(variable, "([A-Za-z_]+)_(charts|playlists)")) |>
-  mutate(
-    variable = str_sub(variable, 4, -1),
-    value = as.integer(value)
-  ) |>
-  separate(
-    col = variable,
-    into = c('streamer', 'type'),
-    sep = "_"
-  ) |>
-  pivot_wider(
-    names_from = type,
-    values_from = value,
-    names_prefix = "num_"
-  ) 
-
-  gt(sptfy_charts_playlists)
-
-ggplot(sptfy_charts_playlists, aes(x=streamer, y=num_charts)) +
-  geom_bar(position='dodge', stat='summary', fun='mean')
-
-ggplot(sptfy_charts_playlists, aes(x=streamer, y=num_playlists)) +
-  geom_bar(position='dodge', stat='summary', fun='mean')
-```
-
+Unfortunately, I couldn't see much evidence of a correlation between the Beats per Minute and the seven Spotify metrics Further understanding of the metrics' definitions might be required to reveal patterns between different variables. 
