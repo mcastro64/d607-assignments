@@ -19,7 +19,7 @@ library(stringr)
 
 # Overview 
 
-For project 2, we were asked to import three untidy datasets, make it tidy and conduct some analysis with the newly tranformed dataframe. For my project, I worked with the following:
+For project 2, we were asked to import three untidy datasets, make it tidy and conduct some analysis with the newly transformed dataframe. For my project, I worked with the following:
 
 * Florida Demographics 
 * Marital Status (1960-2020)
