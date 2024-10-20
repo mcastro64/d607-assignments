@@ -1,0 +1,166 @@
+---
+title: "Week 7 Assignment"
+author: "Marco Castro"
+date: "2024-10-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dbplyr)
+library(tidyr)
+library(tibble)
+library(rvest)
+library(rlist)
+library(XML)
+library(xml2)
+library(jsonlite)
+library(arrow)
+library(stringr)
+```
+
+## Preparing different file formats
+
+In this assigname, we were asked to prepare a dataset by first formatting into four different file formats (JSON, HTML, XML, and Parquet) and then reading it into R. I began by creating an HTML table from the data that was provided, then imported the it using the  _readHTMLTable_ from the __XML__ package. The package did a good job at converting the HTML table elements into a dataframe, using the values in row 1 as my column names. The package brings in all column data in a char format, however, which will need to be manually reassigned to the respective variable types using _transform_ where [col_value] = as.[var_type]([col_value]).
+
+```{r read-html}
+
+html_file <- "cuny-mart-data.html"
+
+html_df <- readHTMLTable(html_file)
+html_df <- list.clean(html_df, fun = is.null, recursive = FALSE)
+names(html_df)
+
+html_products <- html_df$products
+glimpse(html_products)
+
+```
+
+## Exporting as Different Formats
+### XML
+
+Once we have imported our HTML set and have it in a dataframe, we can now export it to the other requested formats. First I exported the data in XML format using the _XML_ package. I needed to create a parent node "products" then used _apply_ to generate child nodes "product" and transform my dataframe's rows into their own grandchildren nodes. Finally, we write the file to the working directory.
+
+```{r write-formats-xml}
+
+df <- html_products |>
+  dplyr::select_all(~gsub("\\s+|\\.", "_", .)) |> 
+  dplyr::select_all(tolower) |>
+  transform(item_id = as.integer(item_id), 
+               price = as.numeric(price))
+
+# create a new xml doc
+doc_xml <- newXMLDoc(isHTML = FALSE)
+
+# create a parent node
+table_node <- newXMLNode("products", doc = doc_xml)
+
+# row data
+row_data <- apply(df, 1, function(x) {
+  z1 <- newXMLNode('product') # create a new node for each row
+  addChildren(z1, lapply(names(x), function(y) newXMLNode(y, x[y])))
+})
+
+# add row data to table node
+xmlParent(row_data) <- table_node
+
+# save as xml file
+saveXML(doc_xml, file = "df.xml")
+
+```
+
+
+### Reading from XML
+
+To read the file in, I used the function _xmlToDataFrame_ package from the __XML__ package. As with the HTML example, the XML was converted into a dataframe ready for manipulation. Using glimpse we can see that the XML example failed to preserve the variable type "integer" for the item_id column and the "double" for the price column.
+
+```{r read-xml}
+
+xml_file <- "df.xml"
+xml_df <- xmlToDataFrame(xml_file)
+xml_products <- xml_df$product
+
+glimpse(xml_df)
+```
+
+### Exporting As JSON
+
+Using the same dataframe from before, I used the _write_json_ function from the __jsonlite__ package to export my data as json file.
+
+```{r write-formats-json}
+doc_json <- jsonlite::write_json(df, "df.json")
+
+```
+
+### Reading from JSON
+
+I used the _fromJSON_ function from the __jsonlite__ package to read my data from JSON format into a dataframe. Unlike the previous two examples, the JSON file was able to preserve the variable type "integer" for the item_id column and the "double" for the price column.
+
+```{r read-json}
+
+json_file <- "cuny-df-data.json"
+df_products <- fromJSON("df.json", flatten=TRUE)
+glimpse(df_products)
+```
+
+### Exporting as Parquet
+
+I used the _write_parquet_ function from the __Arrow__ package to export my data from a parquet file as shown below:
+
+```{r write-parquet}
+
+write_parquet(df, "df.parquet")
+
+```
+
+### Importing as Parquet
+
+I used the _read_parquet_ function from the __arrow__ package to import my data from a parquet file into a dataframe. As with the JSON example, the parquet example preserved my variable types.
+
+```{r read-parquet}
+ 
+df_parquet <- read_parquet("df.parquet") 
+
+glimpse(df_parquet)
+```
+
+### Prepping data for analysis
+
+Now that we have imported the data into a dataframe, we can proceed with cleaning it up and also transforming into tidy format. We can
+
+```{r tidy-up}
+
+df2 <- df |>
+  extract(
+    col="variation_id",
+    into="var_id",
+    regex="([a-zA-Z])$"
+  ) 
+
+# pull out product info into its own dataframe
+prods_df <- subset(df2, select = c(item_id, var_id, item_name, brand, price, category))
+
+head(prods_df, n=2)
+vars_df <- df2 |>
+  pivot_longer(
+    cols = c(variation, details),
+    names_to = 'temp_variable',
+    values_to = 'temp_value',
+  ) |>
+  separate(
+    col="temp_value", 
+    into=c("variable", "value"),
+    sep = ":"
+  ) |>
+  dplyr::mutate(value = str_trim(value)) |>
+  subset(select = c(item_id, var_id, category, variable, value))
+
+  head(vars_df,n=10)
+```
+
+Once we have it in this format, we can easily group, summarize and create our analysis.
+
+
+### Conclusion
+All formats have R packages that can reformat data to and from R datagframes into their respective file formats. However, JSON and Parquet files proved to be somewhat more effective as it retained the variable types for the item_id and the price. Comparing file sizes is hard for our dataset, as all file sizes are roughly the same size, with the JSON and HTML file weighting 4k, the parquet file 5k and the XML file 6k. However, this is misleading as our HTML file only contains the table with our data and does not contain the typical things that one might encounter on a real website with additional markup and content that might inflate the size. I expect that as the dataset gets larger, we would have more noticeable differences between file sizes with JSON and parquet having the smallest size and being the most performant.

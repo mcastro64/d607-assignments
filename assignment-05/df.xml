@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<products>
+  <product>
+    <category>Electronics</category>
+    <item_name>Smartphone</item_name>
+    <item_id>101</item_id>
+    <brand>TechBrand</brand>
+    <price> 699.99</price>
+    <variation_id>101-A</variation_id>
+    <variation>Color: Black</variation>
+    <details>Storage: 64GB</details>
+  </product>
+  <product>
+    <category>Electronics</category>
+    <item_name>Smartphone</item_name>
+    <item_id>101</item_id>
+    <brand>TechBrand</brand>
+    <price> 699.99</price>
+    <variation_id>101-B</variation_id>
+    <variation>Color: White</variation>
+    <details>Storage: 128GB</details>
+  </product>
+  <product>
+    <category>Electronics</category>
+    <item_name>Laptop</item_name>
+    <item_id>102</item_id>
+    <brand>CompuBrand</brand>
+    <price>1099.99</price>
+    <variation_id>102-A</variation_id>
+    <variation>Color: Silver</variation>
+    <details>Storage: 256GB</details>
+  </product>
+  <product>
+    <category>Electronics</category>
+    <item_name>Laptop</item_name>
+    <item_id>102</item_id>
+    <brand>CompuBrand</brand>
+    <price>1099.99</price>
+    <variation_id>102-B</variation_id>
+    <variation>Color: Space Gray</variation>
+    <details>Storage: 512GB</details>
+  </product>
+  <product>
+    <category>Home Appliances</category>
+    <item_name>Refrigerator</item_name>
+    <item_id>201</item_id>
+    <brand>HomeCool</brand>
+    <price> 899.99</price>
+    <variation_id>201-A</variation_id>
+    <variation>Color: Stainless Steel</variation>
+    <details>Capacity: 20 cu ft</details>
+  </product>
+  <product>
+    <category>Home Appliances</category>
+    <item_name>Refrigerator</item_name>
+    <item_id>201</item_id>
+    <brand>HomeCool</brand>
+    <price> 899.99</price>
+    <variation_id>201-B</variation_id>
+    <variation>Color: White</variation>
+    <details>Capacity: 18 cu ft</details>
+  </product>
+  <product>
+    <category>Home Appliances</category>
+    <item_name>Washing Machine</item_name>
+    <item_id>202</item_id>
+    <brand>CleanTech</brand>
+    <price> 499.99</price>
+    <variation_id>202-A</variation_id>
+    <variation>Type: Front Load</variation>
+    <details>Capacity: 4.5 cu ft</details>
+  </product>
+  <product>
+    <category>Home Appliances</category>
+    <item_name>Washing Machine</item_name>
+    <item_id>202</item_id>
+    <brand>CleanTech</brand>
+    <price> 499.99</price>
+    <variation_id>202-B</variation_id>
+    <variation>Type: Top Load</variation>
+    <details>Capacity: 5.0 cu ft</details>
+  </product>
+  <product>
+    <category>Clothing</category>
+    <item_name>T-Shirt</item_name>
+    <item_id>301</item_id>
+    <brand>FashionCo</brand>
+    <price>  19.99</price>
+    <variation_id>301-A</variation_id>
+    <variation>Color: Blue</variation>
+    <details>Size: S</details>
+  </product>
+  <product>
+    <category>Clothing</category>
+    <item_name>T-Shirt</item_name>
+    <item_id>301</item_id>
+    <brand>FashionCo</brand>
+    <price>  19.99</price>
+    <variation_id>301-B</variation_id>
+    <variation>Color: Red</variation>
+    <details>Size: M</details>
+  </product>
+  <product>
+    <category>Clothing</category>
+    <item_name>T-Shirt</item_name>
+    <item_id>301</item_id>
+    <brand>FashionCo</brand>
+    <price>  19.99</price>
+    <variation_id>301-C</variation_id>
+    <variation>Color: Green</variation>
+    <details>Size: L</details>
+  </product>
+  <product>
+    <category>Clothing</category>
+    <item_name>Jeans</item_name>
+    <item_id>302</item_id>
+    <brand>DenimWorks</brand>
+    <price>  49.99</price>
+    <variation_id>302-A</variation_id>
+    <variation>Color: Dark Blue</variation>
+    <details>Size: 32</details>
+  </product>
+  <product>
+    <category>Clothing</category>
+    <item_name>Jeans</item_name>
+    <item_id>302</item_id>
+    <brand>DenimWorks</brand>
+    <price>  49.99</price>
+    <variation_id>302-B</variation_id>
+    <variation>Color: Light Blue</variation>
+    <details>Size: 34</details>
+  </product>
+  <product>
+    <category>Books</category>
+    <item_name>Fiction Novel</item_name>
+    <item_id>401</item_id>
+    <brand>-</brand>
+    <price>  14.99</price>
+    <variation_id>401-A</variation_id>
+    <variation>Format: Hardcover</variation>
+    <details>Language: English</details>
+  </product>
+  <product>
+    <category>Books</category>
+    <item_name>Fiction Novel</item_name>
+    <item_id>401</item_id>
+    <brand>-</brand>
+    <price>  14.99</price>
+    <variation_id>401-B</variation_id>
+    <variation>Format: Paperback</variation>
+    <details>Language: Spanish</details>
+  </product>
+  <product>
+    <category>Books</category>
+    <item_name>Non-Fiction Guide</item_name>
+    <item_id>402</item_id>
+    <brand>-</brand>
+    <price>  24.99</price>
+    <variation_id>402-A</variation_id>
+    <variation>Format: eBook</variation>
+    <details>Language: English</details>
+  </product>
+  <product>
+    <category>Books</category>
+    <item_name>Non-Fiction Guide</item_name>
+    <item_id>402</item_id>
+    <brand>-</brand>
+    <price>  24.99</price>
+    <variation_id>402-B</variation_id>
+    <variation>Format: Paperback</variation>
+    <details>Language: French</details>
+  </product>
+  <product>
+    <category>Sports Equipment</category>
+    <item_name>Basketball</item_name>
+    <item_id>501</item_id>
+    <brand>SportsGear</brand>
+    <price>  29.99</price>
+    <variation_id>501-A</variation_id>
+    <variation>Size: Size 7</variation>
+    <details>Color: Orange</details>
+  </product>
+  <product>
+    <category>Sports Equipment</category>
+    <item_name>Tennis Racket</item_name>
+    <item_id>502</item_id>
+    <brand>RacketPro</brand>
+    <price>  89.99</price>
+    <variation_id>502-A</variation_id>
+    <variation>Material: Graphite</variation>
+    <details>Color: Black</details>
+  </product>
+  <product>
+    <category>Sports Equipment</category>
+    <item_name>Tennis Racket</item_name>
+    <item_id>502</item_id>
+    <brand>RacketPro</brand>
+    <price>  89.99</price>
+    <variation_id>502-B</variation_id>
+    <variation>Material: Aluminum</variation>
+    <details>Color: Silver</details>
+  </product>
+</products>
