@@ -1,0 +1,93 @@
+---
+title: "Assignment Web APIs"
+output: html_document
+date: "2024-10-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(jsonlite)
+library(httr2)
+```
+
+***
+# Overview
+
+This week, we were taseked with choosing a New York Times API, constructing an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+I saved my key in an external file and loaded it into R.
+
+```{r read_key}
+source("api_credentials.R")
+```
+***
+## Method 1: Calling the API with JSONlite
+
+I used the __fromJSON__ function from the _jsonlite_ package to call the API. This function asks for the API link which includes a parameter for the period (in days), the method — a reference to the source counted (emails, shares, or views for each article) and your unique API key. 
+
+```{r call_api}
+domain <- "https://api.nytimes.com"
+path   <- "svc/mostpopular/v2/"
+method <- "viewed" # count to use (emailed, shared, or viewed)
+period <- 7        # number of days
+json <- fromJSON(paste(domain, "/", path, method, "/", period,".json?api-key=",api_key,sep=""))
+```
+
+***
+
+## Converting to a Tibble
+
+The API returns a list as a response. To convert it to a dataframe, I used the _as_tibble_ function from the _tibble_ package included in Tidyverse.
+
+```{r conver-to-tibble}
+most_popular_articles <- json$results |>
+  as_tibble()
+
+glimpse(most_popular_articles)
+```
+
+## Method 2: HTTR2
+
+I also used the _httr2_ package to retrive the top articles viewed on the NYTimes site in the last 7 days. I first initilized a request with the domain name and passing the url Path. Then I added the request headers to expect a json format. I used _req_dry_run_ to confim that I had created the right GET request.
+
+```{r get_articles_with_httr2}
+
+method2 <- "shared" # from facebook
+period2 <- 30 # num of days
+req <- request(domain) |> 
+  req_headers("Accept" = "application/json") |> 
+  req_url_path(path = paste("/", path, method2, "/", period2,".json?api-key=",api_key,sep=""))
+
+req |> req_dry_run()
+```
+### Calling the API
+
+I used _req_perform_ to call the api using the request created in the last chunk. I passed the response to _resp_body_string_ to parse the response to a JSON string object that called be passed to JSONlite to return a vector.
+
+```{r get-response}
+resp <- req_perform(req) 
+
+json_resp <- resp |> 
+  resp_body_string() |>
+  fromJSON() 
+```
+
+### Converting to dataframe
+
+Next, I used _as.dataframe_ to convert the JSON vector into a dataframe.
+
+```{r json-df}
+#convert to dataframe
+top_articles <- as.data.frame(json_resp$results)
+
+glimpse(top_articles)
+```
+
+## Conclusion
+
+I used to methods for retrieving our dataset using an API:
+1. JSONLite
+2. HTTR2
+
+For this particular API, the JSONLite package proved to be very easy to use. However, the HTTR2 package has many additional functionality that goes beyond the scope of this assignment which make a more powerful tool. In particularly, we can adjust the request variables to send data to the API and update our core database. Additionally, it allows us to receive and handle data in various formats including HTML and XML. Lastly, it can configured to check for the http status, allowing us to identify 404 and 500 errors in the event that the API call fails. This seems particularly usefule to catch errors particularly when breaking up our request into several JSON dumps through pagination and other filtering methods.
