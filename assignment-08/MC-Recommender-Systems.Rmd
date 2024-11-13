@@ -36,7 +36,7 @@ c) provide recommendations based on user inputs including:
 - using dislikes to remove songs/artists from future suggestions
 - using likes to surface similar songs/artists
 - using play history and library
-- using 
+- using recommendations from people with similar tastes
 
 ### Reverse Engineering the Site
 
