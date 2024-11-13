@@ -1,0 +1,51 @@
+---
+title: "Week 11 - Recommender Systems"
+author: "Marco Castro"
+date: "2024-11-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Recommender Systems
+
+Apple Music is a music streaming service from the Apple Inc. that allows users to pay a monthly subscription fee to play unlimited tracks and albums. The service is marketed as an alternative to streaming music giant Spotify. However, despite being an early innovator in the digital music space, [Apple Music holds only a 12.6% share of total worldwide streaming subscribers vs Spotify's 31.7%](https://www.statista.com/statistics/653926/music-streaming-service-subscriber-share/).
+
+### Scenario Design
+
+#### 1. Who are the target users?
+
+Apple Music aims to the hold largest market share of music streamers.  Apple's users currently skew somewhat older than Spotify's; [60% of its users are over the age of 35 while 46% of Spotify users are of the same age groups](https://splice.com/blog/best-streaming-service-music/). Along gender lines, slightly more Apple users are women (56%) vs men (44%) while Spotify gender demographics are directly inverted (56% men vs 44% women) according to [Statista](https://www.statista.com/statistics/822927/apple-music-user-gender/). To draw users away from Spotify, Apple currently incentivizes account activations or reactivations by offering three months of free service every time you activate a new Apple device such as iPhone/iWatch or an Apple laptop/desktop computer. 
+
+#### 2. What are their key goals?
+
+The key goals for users of this service are 
+a) to stream songs, albums, or artists, 
+b) to create playlists for future replay, and 
+c) to discover songs and artists that they might like.
+
+#### 3. How can you help them accomplish those goals?
+
+We can help them accomplish those goals by 
+a) designing an application that is easy to navigate and search by songs, albums or artists,
+b) making it easy to create and add songs to playlists, and
+c) provide recommendations based on user inputs including:
+- suggesting songs/artists from past song/album purchase or streaming history
+- using dislikes to remove songs/artists from future suggestions
+- using likes to surface similar songs/artists
+- using play history and library
+- using 
+
+### Reverse Engineering the Site
+
+From exploring its interface, Apple Music appears to collect data from a user's listening history, possibly even logging skips or duration listened. It likely uses a hybrid method pairing explicit user information with some type of collaborative filtering to recommend music from users with similar preferences. It's also likely that Apple uses a similar [approach as Spotify](https://blog.landr.com/spotify-algorithm/), where it analyzed features such as tempo, key and genre.
+
+### Recommendations for Improvement
+
+Apple could use sentiment analysis for song lyrics and compare it against user playback patterns to get a sense of the user's mood throughout the day. Additionally, it could pair this data with that gathered through its devices to gain an understanding of their activity habits. For example, if the user goes to the gym at the same time every day, it can use data such as heartbeat from an Apple Watch or running speed from GPS data collected through an iPhone to suggest more upbeat music suitable for a more physically active time of day, use data from its computers such as CPU speed or applications running to understand work habits and suggest music selections that support user concentration or focus mode, or use time of day or an iPhones "don't disturb" or Sleeping mode to suggest more relaxing music. It can also use geolocation to suggest "undiscovered" local artists, concert listings to bring awareness of upcoming events in your area this weekend, or music liked by people you socialize with such as coworkers. It can also used data data from its other services, such as Apple TV to recommend music from people that like similar shows or movies. Lastly, it could partner with music artists themselves to learn their musical influences and listening habits to help connect their fans to other artists through a nearest neighbor analysis. For example, if several artists you listen to were heavily influenced by certain artists, it could serve as indicator of someone you might like to listen to.
+
+## Conclusion
+With a trove of data at its disposal from its devices, Apple could further tweak its Apple Music algorythm to gain a better understanding or user habits and preferences. However, it needs to be careful to avoid breaching the trust of its users who may feel 
+that their privacy is being invaded.
