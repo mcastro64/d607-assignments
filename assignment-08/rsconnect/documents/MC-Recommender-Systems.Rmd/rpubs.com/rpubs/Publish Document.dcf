@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/1244944/b26b4708cfa143e5827eb437475affd7
+bundleId: https://api.rpubs.com/api/v1/document/1244944/b26b4708cfa143e5827eb437475affd7
+url: http://rpubs.com/mcastro64/1244944
+version: 1
