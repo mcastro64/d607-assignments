@@ -1,0 +1,84 @@
+---
+title: "Week 11 - Recommender System - GBE"
+author: "Marco Castro"
+date: "2024-11-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(RMySQL)
+```
+
+## Recommender Systems - Global Baseline Estimate
+
+In this lab, we are asked to use the Global Baseline Estimate (GBE) algorithm to calculate how a viewer would rate a movie based on a) how that specific viewer has rated other movies and b) how all movies in a dataset have been rated by all users. The formula to calculate the GBE predicted value is:
+
+GBE = "Mean movie rating overall" + ("Specific movie rating relative to average") + ("User rating relative to average")
+
+First we will load in our movie survey data as follows:
+
+```{r connect_to_db} 
+# Read data from db
+
+source("login_credentials.R")
+
+
+mydb <-  dbConnect(MySQL(), user = db_user, password = db_password,
+                   dbname = db_name, host = db_host, port = db_port)
+
+query <- "SELECT r.response_id, p.FirstName, m.title, r.rating FROM survey_movie_ratings AS r LEFT JOIN survey_movies AS m ON m.movie_id = r.movie_id LEFT JOIN survey_participants AS p ON p.participant_id = r.participant_id"
+rs <- dbSendQuery(mydb, query)
+df <-  fetch(rs, n = -1) |>
+  rename(viewer = FirstName )
+dbDisconnect(mydb)
+
+head(df, 10)
+```
+
+### Calculating the GBE
+
+To calculate the GBE, we first need to calculate the mean rating for all movies. Next, we need to calculate the _Specific movie rating relative to average_. We group the data by the title column, then use mutate to create a new field called _movie_avg_adj_ which equals the average rating for each movie subtracted by the mean rating for all movies. This tells us how different the movie rates in comparison to other movies. We use the same approach to calculate the _User rating relative to average_ by grouping by the _viewer field_ and creating a new column called _viewer_avg_adj_ to store the average rating for a given viewer - the mean rating for all movies. This tells us how a differnt a viewer's typical ratings are from the average rating.
+
+Finally, we rounded the values to match our initial integer ratings from 1-5.
+
+```{r }
+
+# calculate mean rating for all movies
+df <- df |>
+  mutate(
+    mean_movie_rating = mean(rating,  na.rm=T)
+  ) 
+  
+movie_calculated_rating <- df |>
+  group_by(title) |>
+  # calculate movie avg - mean movie rating
+  mutate( 
+    movie_avg_adj = mean(rating,  na.rm=T) - mean_movie_rating
+  ) |>
+  ungroup()  |>
+  group_by(viewer) |>
+  # calculate viewer avg - mean movie rating
+  mutate(
+    viewer_avg_adj = mean(rating,  na.rm=T) - mean_movie_rating
+  ) |>
+  ungroup() |>
+  filter(is.na(rating)) |>
+  # for all null ratings, replace rating with global baseline estimate 
+  mutate(gbe_rating = mean_movie_rating + movie_avg_adj + viewer_avg_adj)
+
+glimpse(movie_calculated_rating)
+
+# round ratings
+movie_gbe_rating <- movie_calculated_rating |>
+  subset(select = c(viewer, title, gbe_rating)) |>
+  mutate(rounded_gbe = round(gbe_rating))
+
+movie_gbe_rating
+```
+
+## Conclusion
+
+The Global Baseline Estimate allows us to predict how a user would rate a particular movie or item based on their past ratings and the average rating for a specific movie or item. This simple method will give us a good baseline to work with but may need fine tuning to improve results. Even in this sample dataset, we can see the GBE has predicted values above our rating ceiling (5). While I adjusted this by rounding our predicted value, it may not be the most accurate way to resolve this issuse; values above 5.5 would be rounded out of range (6) and flooring may loose some nuance as in the case of the 3.97 rating which would result in a rating 3 instead of 4. Beyond these simple observations, we may want to experiment with other algorithms that compare  each viewer whose ratings we want to predict with the ratings of viewers that have more the preferences in common as a more robust methodology.

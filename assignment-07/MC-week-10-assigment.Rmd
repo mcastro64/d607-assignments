@@ -1,0 +1,97 @@
+---
+title: "Week 10 Assignment"
+author: "Marco Castro"
+date: "2024-11-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse)
+library(tidytext)
+
+library(janeaustenr)
+```
+## Sentiment Analysis
+The assignment for Week 10 is broken up into two parts. The first is to replicate the primary example from _Text Mining with R_, (Chapter 2)[https://www.tidytextmining.com/sentiment.html]. The second part of the assignment it to use a different corpus and incorporate at least one additional sentiment lexicon.
+
+### Replicating 
+
+The following code chunk was copied over from the book _Text Mining with R_, (Chapter 2)[https://www.tidytextmining.com/sentiment.html for educational practice purposes. Specifically it uses a corpus of "Pride & Prejudice 
+
+```{r load sentiment}
+# Source : Text Mining with R, Chapter 2. https://www.tidytextmining.com/sentiment.html
+
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",  ignore_case = TRUE)))
+  ) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+#loughran
+
+pride_prejudice <- tidy_books %>% 
+  filter(book == "Pride & Prejudice")
+
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+
+bing_and_nrc <- bind_rows(
+  pride_prejudice %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  pride_prejudice %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+# plot number of words 
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  bind_rows(loughran) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+
+
+
+```{r add-loughran}
+
+loughran <- pride_prejudice %>% 
+  inner_join(get_sentiments("loughran")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "LOUGHRAN")
+
+```
+
+```{r plot-diffs}
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  bind_rows(loughran) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+

@@ -22,7 +22,7 @@ library(stringr)
 
 ## Preparing different file formats
 
-In this assigname, we were asked to prepare a dataset by first formatting into four different file formats (JSON, HTML, XML, and Parquet) and then reading it into R. I began by creating an HTML table from the data that was provided, then imported the it using the  _readHTMLTable_ from the __XML__ package. The package did a good job at converting the HTML table elements into a dataframe, using the values in row 1 as my column names. The package brings in all column data in a char format, however, which will need to be manually reassigned to the respective variable types using _transform_ where [col_value] = as.[var_type]([col_value]).
+In this assignment, we were asked to prepare a dataset by first formatting into four different file formats (JSON, HTML, XML, and Parquet) and then reading it into R. I began by creating an HTML table from the data that was provided, then imported the it using the  _readHTMLTable_ from the __XML__ package. The package did a good job at converting the HTML table elements into a dataframe, using the values in row 1 as my column names. The package brings in all column data in a char format, however, which will need to be manually reassigned to the respective variable types using _transform_ where [col_value] = as.[var_type]([col_value]).
 
 ```{r read-html}
 
